@@ -67,7 +67,7 @@ sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-r
 ```
 code ~/.bashrc
 ```
-Add this code
+Add this code if you want
 ```
 echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
