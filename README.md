@@ -15,4 +15,6 @@ this project uses YOLOv11 for object detection and integrates the detected objec
     Generate high-precision 3D maps that visually represent detected objects and the surrounding terrain based on object recognition.
 ---
 
-## Keyword
+## Getting Started
+
+### 1. Prerequisites
