@@ -127,10 +127,9 @@ sudo make install
 #### Install ORB-SLAM
 
 ```
-sudo apt update
 sudo apt install cmake build-essential git libgtk-3-dev
-sudo apt install libeigen3-dev libboost-all-dev libglew-dev
-sudo apt install libtbb-dev libx11-dev libqt5opengl5-dev qtbase5-dev
+sudo apt install libboost-all-dev libglew-dev libtbb-dev libx11-dev libqt5opengl5-dev qtbase5-dev
+
 cd ~/YOLO_ORB_SLAM3
 git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git ORB_SLAM3
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
