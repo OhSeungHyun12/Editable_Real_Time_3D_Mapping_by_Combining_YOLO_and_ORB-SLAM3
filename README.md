@@ -86,4 +86,49 @@ ros2 topic list
 printenv ROS_DISTRO  # Check the output: "jazzy" 
 ```
 
+#### OpenCV
+
+> **Install OpenCV**
+```
+sudo apt install libopencv-dev python3-opencv
+```
+
+> **Test**
+```
+pkg-config --modversion opencv4
+```
+
+#### Eigen3
+
+> **Install Eigen3**
+```
+sudo apt install libeigen3-dev
+```
+
+> **Test**
+```
+pkg-config --modversion eigen3
+```
+
+#### Pangolin 
+
+> **Install Pangolin**
+```
+git clone https://github.com/stevenlovegrove/Pangolin.git
+cd Pangolin
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+```
+
+> **Test**
+```
+ls /usr/local/include/pangolin/
+```
+
+
+
+
+
 
