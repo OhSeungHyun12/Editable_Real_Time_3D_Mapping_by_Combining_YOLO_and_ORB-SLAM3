@@ -158,6 +158,6 @@ sudo make install
 > **Build**
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
-./build.sh
+./build.sh | tee build.log
 ```
 
