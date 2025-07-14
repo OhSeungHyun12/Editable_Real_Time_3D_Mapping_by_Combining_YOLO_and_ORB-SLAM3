@@ -4,7 +4,9 @@
 this project uses YOLOv11 for object detection and integrates the detected object into a 3D map built with ORB-SLAM3. The goal is to generate a high-precision 3D map that accurately represents the position, shape, and surrounding structure of the detedcted objects.
 
 ## Keyword
-+  Object Detection
++  **Object Detection**
+Real-time object detection using YOLOv11.
 +  Dynamic SLAM
+
 +  3D Map Generation
 ---
