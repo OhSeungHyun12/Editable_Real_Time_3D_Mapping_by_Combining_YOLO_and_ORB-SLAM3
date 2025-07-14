@@ -114,6 +114,8 @@ pkg-config --modversion eigen3
 
 > **Install Pangolin**
 ```
+sudo apt update
+sudo apt install libepoxy-dev
 mkdir YOLO_ORB_SLAM3
 cd ~/YOLO_ORB_SLAM3/Pangolin
 git clone https://github.com/stevenlovegrove/Pangolin.git
