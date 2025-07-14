@@ -136,12 +136,22 @@ cd ~/YOLO_ORB_SLAM3
 git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git ORB_SLAM3
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
-./build.sh
 ```
 
+#### Intel RealSense cammera
 
+> **Install RealSense driver**
+```
+git clone https://github.com/IntelRealSense/librealsense.git
+cd librealsense
+./scripts/setup_udev_rules.sh
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+sudo make install
+```
 
-
+> Replace with modified file that overwrites specific files inside ORB SlAM
 
 
 
