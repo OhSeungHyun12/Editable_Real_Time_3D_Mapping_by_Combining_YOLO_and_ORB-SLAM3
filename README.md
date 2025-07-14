@@ -153,7 +153,13 @@ sudo make install
 
 > Replace with modified file that overwrites specific files inside ORB SlAM
 
+### 3. Build
 
+#### Build ORB-SLAM3
 
-
+> **Build**
+```
+cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
+./build.sh
+```
 
