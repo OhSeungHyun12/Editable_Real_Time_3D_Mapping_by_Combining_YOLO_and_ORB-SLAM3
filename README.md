@@ -47,7 +47,7 @@ sudo apt install software-properties-common
 sudo add-apt-repository universe
 ```
 
-> **Enable required repositories**
+> **Install ROS 2 APT Source**
 ```
 $ sudo apt update && sudo apt install curl -y
 $ export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
@@ -66,7 +66,7 @@ sudo apt update && sudo apt upgrade
 sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool
 ```
 
-> **Make venv**
+> **Make Virtual Environment**
 ```
 sudo apt install python3 python3-venv python3-pip
 python3 -m venv ~/venvs/ORB_SLAM3_venv
@@ -95,49 +95,37 @@ ros2 topic list
 printenv ROS_DISTRO  # Check the output: "jazzy" 
 ```
 
-#### OpenCV
+#### Install OpenCV
 
-> **Install OpenCV**
 ```
 sudo apt install libopencv-dev python3-opencv
-```
-
-> **Test**
-```
 pkg-config --modversion opencv4
 ```
 
-#### Eigen3
+#### Install Eigen3
 
-> **Install Eigen3**
 ```
 sudo apt install libeigen3-dev
-```
-
-> **Test**
-```
 pkg-config --modversion eigen3
 ```
 
-#### Pangolin 
+#### Install Pangolin 
 
-> **Install Pangolin**
 ```
-sudo apt update
 sudo apt install libepoxy-dev
 pip install wheel
+
 mkdir YOLO_ORB_SLAM3
-cd ~/YOLO_ORB_SLAM3/Pangolin
 git clone https://github.com/stevenlovegrove/Pangolin.git
+cd ~/YOLO_ORB_SLAM3/Pangolin
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
 ```
 
-#### ORB-SLAM
+#### Install ORB-SLAM
 
-> **Install ORB-SLAM**
 ```
 sudo apt update
 sudo apt install cmake build-essential git libgtk-3-dev
