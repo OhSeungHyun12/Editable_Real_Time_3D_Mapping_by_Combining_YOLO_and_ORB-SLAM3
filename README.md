@@ -78,17 +78,3 @@ sudo apt install librealsense2-dev
 # Permanently apply via CMakeLists.txt:
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error -Wno-error=array-bounds")
 
-
----
-
-이제 위의 내용을 `docs/ERROR_LOG.md`에 넣고 깃허브에 커밋하면, 문서처럼 잘 보이며 코드 블록으로도 명확하게 나타납니다.
-
-**추가로 README.md에 링크를 걸고 싶다면**, 아래를 추가해 주세요:
-
-```markdown
-[🛠 Error Log (click here)](docs/ERROR_LOG.md)
-
-
-
-
-
