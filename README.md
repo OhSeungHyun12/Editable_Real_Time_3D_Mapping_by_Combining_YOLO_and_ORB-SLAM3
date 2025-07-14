@@ -67,7 +67,7 @@ sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-r
 ```
 code ~/.bashrc
 ```
-Add this code if you want
+You can add to this code or change it if you want.
 ```
 echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
@@ -79,6 +79,11 @@ alias orbslam3_env='source ~/envs/orbslam3_env/bin/activate'
 
 ```
 
-
+> **Test**
+```
+ros2 --help
+ros2 topic list
+printenv ROS_DISTRO  # Check the output: "jazzy" 
+```
 
 
