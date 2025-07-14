@@ -63,7 +63,21 @@ sudo apt update && sudo apt upgrade
 sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool
 ```
 
+> **Setup environment ROS 2**
+```
+code ~/.bashrc
+```
+Add this code
+```
+echo -e "alias list:\n\r jazzy"
+alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
+alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is activated!\""
 
+echo "To see env list type: envs"
+alias envs='ls ~/envs'
+alias orbslam3_env='source ~/envs/orbslam3_env/bin/activate'
+
+```
 
 
 
