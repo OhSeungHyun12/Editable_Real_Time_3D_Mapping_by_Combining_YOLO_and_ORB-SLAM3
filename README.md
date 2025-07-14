@@ -133,7 +133,6 @@ sudo apt install libboost-all-dev libglew-dev libtbb-dev libx11-dev libqt5opengl
 cd ~/YOLO_ORB_SLAM3
 git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git ORB_SLAM3
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
-chmod +x build.sh
 ```
 
 #### Intel RealSense cammera
@@ -158,6 +157,7 @@ sudo make install
 > **Build**
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
+chmod +x build.sh
 ./build.sh | tee build.log
 ```
 
