@@ -1,0 +1,18 @@
+# YOLO-ORB-SLAM 프로젝트 에러 정리
+
+이 문서는 Ubuntu 24.04 + ROS2 Jazzy + YOLOv11 + ORB-SLAM3 기반 프로젝트 개발 중 발생한 주요 에러들과 해결 방법을 정리한 자료입니다.
+
+---
+
+## 📌 0. 개요
+
+- 본 정리는 Eigen, GCC13, RealSense, C++17 등 환경 변화로 인한 컴파일 에러 및 경고에 대한 해결법을 포함합니다.
+- `cmake`, `CMakeLists.txt`, 빌드 플래그 설정 등을 중심으로 수정이 필요합니다.
+
+---
+
+## ⚠️ 1. Eigen 내부 SIMD 최적화 코드 `array-bounds` 경고
+
+- **에러 메시지**
+  ```bash
+  error: array subscript ‘__m128_u[0]’ is partly outside array bounds [-Werror=array-bounds=]
