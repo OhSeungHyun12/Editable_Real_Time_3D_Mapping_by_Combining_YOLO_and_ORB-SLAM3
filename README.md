@@ -8,6 +8,9 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 
     Real-time object detection using YOLOv11.
 +  Dynamic SLAM
-
+  
+    ORB-SLAM3 provides real-time camera tracking and 3D map reconstruction in dynamic environments.
 +  3D Map Generation
+  
+    Generate high-precision 3D maps that visually represent detected objects and the surrounding terrain based on object recognition.
 ---
