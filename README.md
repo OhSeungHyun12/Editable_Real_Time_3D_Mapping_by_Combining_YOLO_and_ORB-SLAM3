@@ -67,7 +67,6 @@ sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-r
 ```
 sudo apt install python3 python3-venv python3-pip
 python3 -m venv ~/venvs/ORB_SLAM3_venv
-
 ```
 
 > **Setup environment ROS 2**
