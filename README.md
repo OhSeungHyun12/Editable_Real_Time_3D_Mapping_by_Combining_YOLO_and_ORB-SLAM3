@@ -5,6 +5,7 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 
 ## Keyword
 +  **Object Detection**
+
 Real-time object detection using YOLOv11.
 +  Dynamic SLAM
 
