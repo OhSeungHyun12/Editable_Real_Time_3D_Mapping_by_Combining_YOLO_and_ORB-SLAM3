@@ -114,17 +114,13 @@ pkg-config --modversion eigen3
 
 > **Install Pangolin**
 ```
+mkdir YOLO_ORB_SLAM3
 git clone https://github.com/stevenlovegrove/Pangolin.git
-cd Pangolin
+cd ~/YOLO_ORB_SLAM3/Pangolin
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
-```
-
-> **Test**
-```
-ls /usr/local/include/pangolin/
 ```
 
 
