@@ -52,7 +52,16 @@ curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-a
 sudo dpkg -i /tmp/ros2-apt-source.deb
 ```
 
+> **Install development tools (optional)**
+```
+sudo apt update && sudo apt install ros-dev-tools
+```
 
+> **Install ROS 2**
+```
+sudo apt update && sudo apt upgrade
+sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool
+```
 
 
 
