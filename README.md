@@ -28,3 +28,8 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 > **Pangolin:** 0.9.3
 
 > **ROS:** jazzy
+
+### 2. Installation
+
+#### ROS2 Jazzy
+
