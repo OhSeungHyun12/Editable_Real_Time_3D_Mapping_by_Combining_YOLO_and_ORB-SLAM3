@@ -18,3 +18,9 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 ## Getting Started
 
 ### 1. Prerequisites
+
+> **OS:**  Ubuntu 24.04
+> **OpenCV:** 4. 6. 0
+> **Eigen3:** 3.4.0
+> **Pangolin:** 0.9.3
+> **ROS:** jazzy
