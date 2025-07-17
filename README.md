@@ -22,13 +22,10 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-Wno-error=array-bounds"
 # error:
 # use of an operand of type ‘bool’ in ‘operator++’ is forbidden in C++17
 
-// before
-bool done = false;
-done++;
-
-// after
-int done = 0;
-done++;
+// replace with:
+bool -> int
+ex) header file name LoopClosing.h
+bool mnFullBAIdx; -> int mnFullBAIdx;
 
 ### ⚠️ 3. 'std::chrono::monotonic_clock' does not exist
 
