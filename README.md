@@ -84,7 +84,7 @@ alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is 
 
 echo "To see venv list type: venvs"
 alias venvs='ls ~/venvs'
-alias orbslam3_venv='source ~/envs/orbslam3_venv/bin/activate'
+alias ORB_SLAM3_venv='source ~/venvs/ORB_SLAM3_venv/bin/activate'
 
 ```
 
