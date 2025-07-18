@@ -82,9 +82,9 @@ echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
 alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is activated!\""
 
-echo "To see env list type: envs"
-alias envs='ls ~/envs'
-alias orbslam3_env='source ~/envs/orbslam3_env/bin/activate'
+echo "To see venv list type: venvs"
+alias venvs='ls ~/venvs'
+alias orbslam3_venv='source ~/envs/orbslam3_venv/bin/activate'
 
 ```
 
