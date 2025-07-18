@@ -113,7 +113,7 @@ pkg-config --modversion eigen3
 
 ```
 sudo apt install libepoxy-dev
-pip install wheel
+pip install wheel && pip install --upgrade setuptools && pip install pyyaml
 
 mkdir YOLO_ORB_SLAM3 && cd YOLO_ORB_SLAM3
 git clone https://github.com/stevenlovegrove/Pangolin.git
