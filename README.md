@@ -35,7 +35,7 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 
 > **Set Locale**
 ```
-sudo apt update && sudo apt install locales
+sudo apt update && sudo apt install locales -y
 sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -43,21 +43,22 @@ export LANG=en_US.UTF-8
 
 > **Enable required repositories**
 ```
-sudo apt install software-properties-common
+sudo apt install software-properties-common -y
 sudo add-apt-repository universe
 ```
 
 > **Install ROS 2 APT Source**
 ```
-$ sudo apt update && sudo apt install curl -y
-$ export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
-$ curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb" # If using Ubuntu derivates use $UBUNTU_CODENAME
-$ sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt install curl -y
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
 ```
 
 > **Install development tools (optional)**
 ```
-sudo apt update && sudo apt install ros-dev-tools
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools
 ```
 
 > **Install ROS 2**
@@ -68,7 +69,7 @@ sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-r
 
 > **Make Virtual Environment**
 ```
-sudo apt install python3 python3-venv python3-pip
+sudo apt install python3 python3-venv python3-pip -y
 python3 -m venv ~/venvs/ORB_SLAM3_venv
 ```
 
@@ -98,27 +99,27 @@ printenv ROS_DISTRO  # Check the output: "jazzy"
 #### Install OpenCV
 
 ```
-sudo apt install libopencv-dev python3-opencv
+sudo apt install libopencv-dev python3-opencv -y
 pkg-config --modversion opencv4
 ```
 
 #### Install Eigen3
 
 ```
-sudo apt install libeigen3-dev
+sudo apt install libeigen3-dev -y
 pkg-config --modversion eigen3
 ```
 
 #### Install Pangolin 
 
 ```
-sudo apt install libepoxy-dev
-pip install wheel && pip install --upgrade setuptools && pip install pyyaml
+sudo apt install libepoxy-dev -y
+pip install wheel setuptools --upgrade
+pip install pyyaml
 
 mkdir YOLO_ORB_SLAM3 && cd YOLO_ORB_SLAM3
 git clone https://github.com/stevenlovegrove/Pangolin.git
-cd Pangolin
-mkdir build && cd build
+cd Pangolin && mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
@@ -127,17 +128,17 @@ sudo make install
 #### Install ORB-SLAM
 
 ```
-sudo apt install cmake build-essential git libgtk-3-dev
-sudo apt install libboost-all-dev libglew-dev libtbb-dev libx11-dev libqt5opengl5-dev qtbase5-dev
+sudo apt install cmake build-essential git libgtk-3-dev libboost-all-dev libglew-dev \
+libtbb-dev libx11-dev libqt5opengl5-dev qtbase5-dev -y
 
 cd ~/YOLO_ORB_SLAM3
 git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git ORB_SLAM3
-cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
+cd ORB_SLAM3
 ```
 
-#### Intel RealSense cammera
+#### Intel RealSense Camera
 
-> **Install RealSense driver**
+> **RealSense Camera driver**
 ```
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense
