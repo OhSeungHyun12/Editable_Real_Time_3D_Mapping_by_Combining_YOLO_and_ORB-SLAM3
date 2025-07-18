@@ -162,3 +162,9 @@ chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
 
+> **Running ORB-SLAM3**
+```
+./cam/mono_realsense_D455 Vocabulary/ORBvoc.txt ./cam/mono_RealSense_D455.yaml
+```
+
+
