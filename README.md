@@ -138,7 +138,7 @@ sudo apt install git libssl-dev libusb-1.0-0-dev pkg-config libgtk-3-dev \
 libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libudev-dev libopencv-dev -y
 ```
 
-> **Clone librealsense and build
+> **Clone librealsense and build**
 ```
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense && mkdir build && cd build
