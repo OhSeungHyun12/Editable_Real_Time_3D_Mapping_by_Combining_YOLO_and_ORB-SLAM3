@@ -171,6 +171,11 @@ make -j$(nproc)
 sudo make install
 ```
 
+> **Run viewer**
+```
+realsense-viewer
+```
+
 > Replace with modified file that overwrites specific files inside ORB SlAM
 
 ### 3. Build
