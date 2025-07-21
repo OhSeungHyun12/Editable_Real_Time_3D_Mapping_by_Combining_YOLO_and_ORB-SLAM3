@@ -161,7 +161,7 @@ realsense-viewer
 
 > **Build**
 
-> Replace with modified file that overwrites specific files inside ORB SlAM
+Replace with modified file that overwrites specific files inside ORB SlAM
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
