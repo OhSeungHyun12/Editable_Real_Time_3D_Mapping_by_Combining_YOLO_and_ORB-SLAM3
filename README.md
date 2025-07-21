@@ -176,13 +176,12 @@ sudo make install
 realsense-viewer
 ```
 
-> Replace with modified file that overwrites specific files inside ORB SlAM
-
 ### 3. Build
 
 #### Build ORB-SLAM3
 
 > **Build**
+> Replace with modified file that overwrites specific files inside ORB SlAM
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
