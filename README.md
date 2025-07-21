@@ -171,7 +171,7 @@ make -j$(nproc)
 sudo make install
 ```
 
-> **Run viewer**
+> **Running viewer**
 ```
 realsense-viewer
 ```
