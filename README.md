@@ -55,16 +55,9 @@ curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-a
 sudo dpkg -i /tmp/ros2-apt-source.deb
 ```
 
-> **Install development tools (optional)**
-```
+# Install ROS 2 and dev tools
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools
-```
-
-> **Install ROS 2**
-```
-sudo apt update && sudo apt upgrade
-sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool
 ```
 
 > **Make Virtual Environment**
@@ -114,8 +107,7 @@ pkg-config --modversion eigen3
 
 ```
 sudo apt install libepoxy-dev -y
-pip install wheel setuptools --upgrade
-pip install pyyaml
+pip install --upgrade wheel setuptools pyyaml
 
 mkdir YOLO_ORB_SLAM3 && cd YOLO_ORB_SLAM3
 git clone https://github.com/stevenlovegrove/Pangolin.git
@@ -141,37 +133,23 @@ Since librealsense only supports up to Ubuntu 22, you need to build and install 
 
 > **Installing dependent packages**
 ```
-sudo apt update
 sudo apt install git libssl-dev libusb-1.0-0-dev pkg-config libgtk-3-dev \
-                 libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev \
-                 libudev-dev libopencv-dev
+libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libudev-dev libopencv-dev -y
 ```
 
-> **Download librealsense source**
+> **Clone librealsense and build
 ```
 git clone https://github.com/IntelRealSense/librealsense.git
-cd librealsense
-```
+cd librealsense && mkdir build && cd build
 
-> **Creating a build directory and setting up CMake**
-```
-mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=true -DBUILD_WITH_CUDA=true \
+         -DFORCE_LIBUVC=true -DBUILD_GRAPHICAL_EXAMPLES=false
 
-cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_EXAMPLES=true \
-  -DBUILD_WITH_CUDA=true \
-  -DFORCE_LIBUVC=true \
-  -DBUILD_GRAPHICAL_EXAMPLES=false
-```
-
-> **Build and Install**
-```
 make -j$(nproc)
 sudo make install
 ```
 
-> **Running viewer**
+> **Test camera**
 ```
 realsense-viewer
 ```
