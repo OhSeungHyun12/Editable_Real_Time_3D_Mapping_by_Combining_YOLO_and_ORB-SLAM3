@@ -137,14 +137,36 @@ cd ORB_SLAM3
 ```
 
 #### Intel RealSense Camera
+Since librealsense only supports up to Ubuntu 22, you need to build and install the official source code directly.
 
-> **RealSense Camera driver**
+> **Installing dependent packages**
+```
+sudo apt update
+sudo apt install git libssl-dev libusb-1.0-0-dev pkg-config libgtk-3-dev \
+                 libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev \
+                 libudev-dev libopencv-dev
+```
+
+> **Download librealsense source**
 ```
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense
-./scripts/setup_udev_rules.sh
+```
+
+> **Creating a build directory and setting up CMake**
+```
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_EXAMPLES=true \
+  -DBUILD_WITH_CUDA=true \
+  -DFORCE_LIBUVC=true \
+  -DBUILD_GRAPHICAL_EXAMPLES=false
+```
+
+> **Build and Install**
+```
 make -j$(nproc)
 sudo make install
 ```
