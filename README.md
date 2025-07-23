@@ -141,6 +141,7 @@ libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libudev-dev libopencv-dev -y
 > **Clone librealsense and build**
 ```
 cd ~
+sudo apt install nvidia-cuda-toolkit
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense && mkdir build && cd build
 
