@@ -145,8 +145,9 @@ cd ~sudo apt install nvidia-cuda-toolkit --fix-missing
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense && mkdir build && cd build
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=true -DBUILD_WITH_CUDA=true \
-         -DFORCE_LIBUVC=true -DBUILD_GRAPHICAL_EXAMPLES=false
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=true \
+         -DBUILD_GRAPHICAL_EXAMPLES=true -DFORCE_LIBUVC=true \
+         -DBUILD_WITH_CUDA=true
 
 make -j$(nproc)
 sudo make install
