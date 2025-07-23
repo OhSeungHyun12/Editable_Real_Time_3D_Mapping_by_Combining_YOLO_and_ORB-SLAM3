@@ -147,7 +147,7 @@ cd librealsense && mkdir build && cd build
 
 cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=true \
          -DBUILD_GRAPHICAL_EXAMPLES=true -DFORCE_LIBUVC=true \
-         -DBUILD_WITH_CUDA=true
+         -DBUILD_WITH_CUDA=false
 
 make -j$(nproc)
 sudo make install
