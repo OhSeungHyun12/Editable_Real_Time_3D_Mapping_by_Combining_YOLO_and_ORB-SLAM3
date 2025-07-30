@@ -73,13 +73,26 @@ code ~/.bashrc
 ```
 You can add to this code or change it if you want.
 ```
+
+# ---------------------------
+# ROS 2 Jazzy Aliases
+# ---------------------------
 echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
 alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is activated!\""
 
+# ---------------------------
+# Virtual Environment
+# ---------------------------
 echo "To see venv list type: venvs"
 alias venvs='ls ~/venvs'
 alias ORB_SLAM3_venv='source ~/venvs/ORB_SLAM3_venv/bin/activate'
+
+# ---------------------------
+# ROS Package Path
+# ---------------------------
+export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/home/ruherpan/YOLO_ORB_SLAM3/cam/ROS
+
 
 ```
 
