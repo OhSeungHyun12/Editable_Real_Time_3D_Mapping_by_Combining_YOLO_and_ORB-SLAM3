@@ -91,7 +91,7 @@ alias ORB_SLAM3_venv='source ~/venvs/ORB_SLAM3_venv/bin/activate'
 # ---------------------------
 # ROS Package Path
 # ---------------------------
-export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/home/ruherpan/YOLO_ORB_SLAM3/cam/ROS
+export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/home/ruherpan/YOLO_ORB_SLAM3/ORB_SLAM3/cam/ROS
 
 
 ```
@@ -179,7 +179,7 @@ realsense-viewer
 
 Replace with modified file that overwrites specific files inside ORB SlAM
 ```
-cd ~/YOLO_ORB_SLAM3
+cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
