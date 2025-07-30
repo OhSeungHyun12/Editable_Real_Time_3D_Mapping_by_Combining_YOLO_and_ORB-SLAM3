@@ -179,7 +179,7 @@ realsense-viewer
 
 Replace with modified file that overwrites specific files inside ORB SlAM
 ```
-cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
+cd ~/YOLO_ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
