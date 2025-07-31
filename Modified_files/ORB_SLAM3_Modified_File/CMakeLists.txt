@@ -97,7 +97,7 @@ add_library(${PROJECT_NAME} SHARED
     src/TwoViewReconstruction.cc
     src/Config.cc
     src/Settings.cc
-    src/Yolov11_detect.cc
+    #src/Yolov11_detect.cc
     include/System.h
     include/Tracking.h
     include/LocalMapping.h
@@ -128,7 +128,7 @@ add_library(${PROJECT_NAME} SHARED
     include/SerializationUtils.h
     include/Config.h
     include/Settings.h
-    include/Yolov11_detect.h
+    #include/Yolov11_detect.h
 )
 
 add_subdirectory(Thirdparty/g2o)
@@ -418,12 +418,6 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=array-bounds")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/cam)
-add_executable(mono_realsense_D455 cam/mono_realsense_D455.cc)
-target_link_libraries(mono_realsense_D455 ${PROJECT_NAME})
-add_executable(rgbd_realsense_D455 cam/rgbd_realsense_D455.cc)
-target_link_libraries(rgbd_realsense_D455 ${PROJECT_NAME})
-add_executable(stereo_realsense_D455 cam/stereo_realsense_D455.cc)
-target_link_libraries(stereo_realsense_D455 ${PROJECT_NAME})
-add_executable(webcam cam/webcam.cc)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/YOLO_ORB)
+add_executable(Examples/YOLO_ORB/webcam.cc)
 target_link_libraries(webcam ${PROJECT_NAME})
