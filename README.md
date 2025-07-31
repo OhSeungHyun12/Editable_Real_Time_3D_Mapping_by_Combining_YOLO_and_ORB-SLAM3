@@ -175,7 +175,7 @@ realsense-viewer
 
 > **Installing LibTorch**
 
-Install CUDA 11.8 LibTorch
+Install CUDA 11.8 LibTorch and put it in ORB_SLAM3/Thirdparty.
 ```
 wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu118.zip
 ```
