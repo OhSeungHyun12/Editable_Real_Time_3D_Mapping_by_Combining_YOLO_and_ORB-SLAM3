@@ -171,6 +171,15 @@ sudo make install
 realsense-viewer
 ```
 
+#### YOLOv11
+
+> **Installing LibTorch**
+
+Install CUDA 11.8 LibTorch
+```
+wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu118.zip
+```
+
 ### 3. Build
 
 #### Build ORB-SLAM3
