@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yolo_orb3_ros2</name>
+  <version>0.0.1</version>
+  <description>YOLO ORB-SLAM3 integration for ROS2</description>
+  <maintainer email="ruherpan@example.com">Ruherpan</maintainer>
+  <license>GPLv3</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
