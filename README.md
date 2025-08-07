@@ -195,9 +195,21 @@ chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
 
-> **Running ORB-SLAM3**
+### 4. Running ORB-SLAM3 
+
+> **Run ROS2**
+
+need two terminal
+```
+ros2 run v4l2_camera v4l2_camera_node
+```
+
+> **Intel RealSense Camera D455**
 ```
 ./cam/mono_realsense_D455 Vocabulary/ORBvoc.txt ./cam/mono_RealSense_D455.yaml
 ```
 
-
+> **logi **
+```
+ros2 run yolo_orb3_ros2 mono_ar ~/YOLO_ORB_SLAM3/ORB_SLAM3/Vocabulary/ORBvoc.txt ~/YOLO_ORB_SLAM3/ORB_SLAM3/Examples/ROS2/webcam.yaml
+```
