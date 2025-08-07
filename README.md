@@ -194,6 +194,16 @@ cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
+#### Build ROS2
+
+> **Build**
+
+```
+cd ~/ros2_ws
+rm -rf build/ install/ log/
+colcon build --packages-select yolo_orb3_ros2
+source install/setup.bash
+```
 
 ### 4. Running ORB-SLAM3 
 
