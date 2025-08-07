@@ -187,7 +187,7 @@ wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-
 
 #### Build ORB-SLAM3
 
-> **Build**
+> **ORB-SLAM3**
 
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
@@ -196,7 +196,7 @@ chmod +x build.sh
 ```
 #### Build ROS2
 
-> **Build**
+> **ROS2**
 
 ```
 cd ~/ros2_ws
