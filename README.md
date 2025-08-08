@@ -75,27 +75,81 @@ code ~/.bashrc
 ```
 You can add to this code or change it if you want.
 ```
+# ---------------------------
+# Aliases list
+# ---------------------------
+yolo_orb3_ros2
+echo "To see aliases list type: my_aliases"
+my_aliases() {
+    echo -e "💡 List of available aliases."
+    echo "------------------------------------"
+    echo "▸ ros:"
+    echo "  - jazzy             : Activate ROS2 Jazzy ."
+    echo "  - jazzy_yolo_orb3   : Set Jazzy workspacem, ORB_SLAM3 package path."
+    echo "▸ venvs               : Virtual Environment List."
+    echo "------------------------------------"
+}
 
 # ---------------------------
 # ROS 2 Jazzy Aliases
 # ---------------------------
-echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
 alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is activated!\""
 
 # ---------------------------
 # Virtual Environment
 # ---------------------------
-echo "To see venv list type: venvs"
-alias venvs='ls ~/venvs'
-alias ORB_SLAM3_venv='source ~/venvs/ORB_SLAM3_venv/bin/activate'
+#
+alias venvs="ls ~/venvs"
+alias ORB_SLAM3_venv="source ~/venvs/ORB_SLAM3_venv/bin/activate"
 
 # ---------------------------
 # ROS Package Path
 # ---------------------------
-export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/home/ruherpan/YOLO_ORB_SLAM3/ORB_SLAM3/cam/ROS
+# 
+# ---------------------------
+# ROS Package Path + ORB-SLAM3 env
+# ---------------------------
+jazzy_yolo() {
+    source /opt/ros/jazzy/setup.bash && ros_domain
 
+    # ros2_ws overlay
+    local ws_setup="$HOME/ros2_ws/install/setup.bash"
+    if [ -f "$ws_setup" ]; then
+        source "$ws_setup"
+    fi
 
+    # ORB-SLAM3 ROOT
+    export ORB_SLAM3_ROOT="$HOME/YOLO_ORB_SLAM3/ORB_SLAM3"
+    if [ ! -d "$ORB_SLAM3_ROOT" ]; then
+        echo "⚠️ ORB_SLAM3_ROOT dir not found: $ORB_SLAM3_ROOT"
+    fi
+
+    # Add runtime library path (ORB-SLAM3, libtorch)
+    case ":$LD_LIBRARY_PATH:" in
+        *":$ORB_SLAM3_ROOT/lib:"*) ;;
+        *) export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";;
+    esac
+    case ":$LD_LIBRARY_PATH:" in
+        *":$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:"*) ;;
+        *) export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:$LD_LIBRARY_PATH";;
+    esac
+
+    # Package source path(yolo_orb3_ros2)
+    local pkg_dir="$HOME/ros2_ws/src/yolo_orb3_ros2"
+    if [ -d "$pkg_dir" ]; then
+        case ":$ROS_PACKAGE_PATH:" in
+            *":$pkg_dir:"*) ;;
+            *)
+                export ROS_PACKAGE_PATH="${ROS_PACKAGE_PATH:+$ROS_PACKAGE_PATH:}$pkg_dir"
+                echo "ROS_PACKAGE_PATH += $pkg_dir"
+                ;;
+        esac
+    fi
+
+    echo "Jazzy + workspace overlay + ORB_SLAM3 env ready ✅"
+    echo "ORB_SLAM3_ROOT=$ORB_SLAM3_ROOT"
+}
 ```
 
 > **Test**
