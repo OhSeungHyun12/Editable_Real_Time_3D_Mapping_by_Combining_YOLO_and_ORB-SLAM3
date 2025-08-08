@@ -46,7 +46,8 @@ public:
     torch::Device device;
 
 private:
-    std::chrono::steady_clock::time_point lastFrameTime;  // FPS 계산용 변수 추가
+    // FPS
+    std::chrono::steady_clock::time_point lastFrameTime;  
 };
 
 #endif //YOLO_DETECT_H
