@@ -1,139 +1,78 @@
-/**
-* This file is part of ORB-SLAM3
-*
-* Copyright (C) 2017-2021 Carlos Campos, Richard Elvira, Juan J. Gómez Rodríguez, José M.M. Montiel and Juan D. Tardós, University of Zaragoza.
-* Copyright (C) 2014-2016 Raúl Mur-Artal, José M.M. Montiel and Juan D. Tardós, University of Zaragoza.
-*
-* ORB-SLAM3 is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-* License as published by the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* ORB-SLAM3 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-* the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License along with ORB-SLAM3.
-* If not, see <http://www.gnu.org/licenses/>.
-*/
-
-
 #ifndef VIEWERAR_H
 #define VIEWERAR_H
 
 #include <mutex>
+#include <vector>
+#include <string>
 #include <opencv2/core/core.hpp>
 #include <pangolin/pangolin.h>
-#include <string>
-#include"../../../include/System.h"
 
 namespace ORB_SLAM3
 {
+    class System;    // no core edits
 
-class Plane
-{
-public:
-    Plane(const std::vector<MapPoint*> &vMPs, const cv::Mat &Tcw);
-    Plane(const float &nx, const float &ny, const float &nz, const float &ox, const float &oy, const float &oz);
+    struct Detection 
+    {
+        int x, y, w, h;
+        std::string label;
+        float confidence;
+    };
 
-    void Recompute();
+    class ViewerAR
+    {
+        public:
+        ViewerAR()
+            : mpSystem(nullptr), mFPS(0.f), mT(0.f), fx(0.f), fy(0.f), cx(0.f), cy(0.f) {}
+            
+        void SetSLAM(System* pSystem) { mpSystem = pSystem; }
 
-    //normal
-    cv::Mat n;
-    //origin
-    cv::Mat o;
-    //arbitrary orientation along normal
-    float rang;
-    //transformation from world to the plane
-    cv::Mat Tpw;
-    pangolin::OpenGlMatrix glTpw;
-    //MapPoints that define the plane
-    std::vector<MapPoint*> mvMPs;
-    //camera pose when the plane was first observed (to compute normal direction)
-    cv::Mat mTcw, XC;
-};
+        void SetFPS(float fps) 
+        {
+            mFPS = fps; mT = (fps > 0.f ? 1000.f / fps : 0.f); 
+        }
 
-struct Detection {
-    int x, y, w, h;
-    std::string label;
-    float confidence;
-};
+        void SetCameraCalibration(float fx_, float fy_, float cx_, float cy_) 
+        {
+            fx = fx_; fy = fy_; cx = cx_; cy = cy_;
+        }
 
-class ViewerAR
-{
-public:
-    ViewerAR();
+        // 최신 프레임 전달(ROS 콜백)
+        void SetLatestFrame(const cv::Mat& im) 
+        {
+            std::lock_guard<std::mutex> lk(mMutexLatestFrame);
+            mLatestFrame = im.clone();
+        }
 
-    void SetFPS(const float fps){
-        mFPS = fps;
-        mT=1e3/fps;
-    }
+        // YOLO 감지 결과 전달(디버깅 코드 포함)
+        void SetDetections(const std::vector<Detection>& dets) 
+        {
+            std::lock_guard<std::mutex> lk(mMutexDetections);
+            mDetections = dets;
+            std::cout << "[VIEWER] SetDetections size=" << mDetections.size() << std::endl;
+        }
 
-    void SetSLAM(ORB_SLAM3::System* pSystem){
-        mpSystem = pSystem;
-    }
+        // Pangolin 렌더 루프
+        void Run();
 
-    // Main thread function. 
-    void Run();
+        private:
+            System* mpSystem;
 
-    void SetCameraCalibration(const float &fx_, const float &fy_, const float &cx_, const float &cy_){
-        fx = fx_; fy = fy_; cx = cx_; cy = cy_;
-    }
+            // 최신 프레임 & 뮤텍스
+            cv::Mat mLatestFrame;
+            std::mutex mMutexLatestFrame;
 
-    void SetImagePose(const cv::Mat &im, const cv::Mat &Tcw, const int &status,
-                      const std::vector<cv::KeyPoint> &vKeys, const std::vector<MapPoint*> &vMPs);
+            // 감지 결과 & 뮤텍스
+            std::vector<Detection> mDetections;
+            std::mutex mMutexDetections;
 
-    void GetImagePose(cv::Mat &im, cv::Mat &Tcw, int &status,
-                      std::vector<cv::KeyPoint> &vKeys,  std::vector<MapPoint*> &vMPs);
-        
-    // code add by louis
-    void SetDetections(const std::vector<Detection> &detections) {        
-        std::lock_guard<std::mutex> lock(mMutexDetections);
-        mDetections = detections;
-    }
-    // code add by louis end
+            // 렌더 페이싱/내부파라미터(옵션)
+            float mFPS;   // 입력 FPS
+            float mT;     // 1 프레임 시간(ms)
+            float fx, fy, cx, cy;
+    };
 
-private:
+    // 네임스페이스 내부 free 함수
+    void DrawBoundingBoxes(cv::Mat& im_bgr, const std::vector<Detection>& dets);
 
-    //SLAM
-    ORB_SLAM3::System* mpSystem;
-
-    void PrintStatus(const int &status, const bool &bLocMode, cv::Mat &im);
-    void AddTextToImage(const std::string &s, cv::Mat &im, const int r=0, const int g=0, const int b=0);
-    void LoadCameraPose(const cv::Mat &Tcw);
-    void DrawImageTexture(pangolin::GlTexture &imageTexture, cv::Mat &im);
-    void DrawCube(const float &size, const float x=0, const float y=0, const float z=0);
-    void DrawPlane(int ndivs, float ndivsize);
-    void DrawPlane(Plane* pPlane, int ndivs, float ndivsize);
-    void DrawTrackedPoints(const std::vector<cv::KeyPoint> &vKeys, const std::vector<MapPoint*> &vMPs, cv::Mat &im);
-
-    Plane* DetectPlane(const cv::Mat Tcw, const std::vector<MapPoint*> &vMPs, const int iterations=50);
-
-    // frame rate
-    float mFPS, mT;
-    float fx,fy,cx,cy;
-
-    // Last processed image and computed pose by the SLAM
-    std::mutex mMutexPoseImage;
-    cv::Mat mTcw;
-    cv::Mat mImage;
-    int mStatus;
-    std::vector<cv::KeyPoint> mvKeys;
-    std::vector<MapPoint*> mvMPs;
-
-    // code add by louis start
-    std::vector<Detection> mDetections;
-    std::mutex mMutexDetections;
-    // code add by louis end
-};
-
-void DrawBoundingBoxes(cv::Mat &im, const std::vector<Detection> &detections);
-
-void SetYoloDetections(const std::vector<cv::Rect2i> &boxes);
- 
-
-}
-
-
+} // namespace ORB_SLAM3
 #endif // VIEWERAR_H
-	
-
