@@ -110,7 +110,7 @@ alias ORB_SLAM3_venv="source ~/venvs/ORB_SLAM3_venv/bin/activate"
 # ---------------------------
 # ROS Package Path + ORB-SLAM3 env
 # ---------------------------
-jazzy_yolo() {
+jazzy_yolo_orb3() {
     source /opt/ros/jazzy/setup.bash && ros_domain
 
     # ros2_ws overlay
