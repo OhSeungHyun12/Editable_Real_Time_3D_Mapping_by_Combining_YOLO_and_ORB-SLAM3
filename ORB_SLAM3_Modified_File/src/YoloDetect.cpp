@@ -10,16 +10,13 @@ YoloDetection::YoloDetection()
 {
     torch::jit::setTensorExprFuserEnabled(false);
 
-    // YOLOv11 모델 로드
+    // YOLOv11 model
     mModule = torch::jit::load("yolo11n.torchscript.pt");
-    if (torch::cuda::is_available())
-    {
+    if (torch::cuda::is_available()) {
         device = torch::Device(torch::kCUDA);
         std::cout << "[YOLO] Using GPU for inference" << std::endl;
         mModule.to(device);
-    }
-    else
-    {
+    } else {
         device = torch::Device(torch::kCPU);
         std::cout << "[YOLO] Using CPU for inference" << std::endl;
     }
@@ -29,8 +26,7 @@ YoloDetection::YoloDetection()
     // 클래스 이름 로드
     std::ifstream f("coco.names");
     std::string name;
-    while (std::getline(f, name))
-    {
+    while (std::getline(f, name)) {
         mClassnames.push_back(name);
     }
 
@@ -49,8 +45,7 @@ bool YoloDetection::Detect()
     mvDynamicArea.clear();
     mmDetectMap.clear();
 
-    if (mRGB.empty())
-    {
+    if (mRGB.empty()) {
         std::cerr << "[YOLO] Read RGB failed! No image received from topic." << std::endl;
         return false;
     }
@@ -74,6 +69,7 @@ bool YoloDetection::Detect()
     // 2. YOLO 추론
     torch::IValue output = mModule.forward({imgTensor});
     torch::Tensor preds;
+
     if (output.isTensor())
         preds = output.toTensor();
     else if (output.isTuple())
@@ -88,13 +84,11 @@ bool YoloDetection::Detect()
     // 3. NMS
     auto dets = YoloDetection::non_max_suppression(preds, 0.05, 0.5);
 
-    if (!dets.empty())
-    {
+    if (!dets.empty()) {
         float scaleX = static_cast<float>(mRGB.cols) / 640.0f;
         float scaleY = static_cast<float>(mRGB.rows) / 640.0f;
 
-        for (int i = 0; i < dets[0].sizes()[0]; ++i)
-        {
+        for (int i = 0; i < dets[0].sizes()[0]; ++i) {
             float left   = dets[0][i][0].item().toFloat() * scaleX;
             float top    = dets[0][i][1].item().toFloat() * scaleY;
             float right  = dets[0][i][2].item().toFloat() * scaleX;
@@ -102,28 +96,35 @@ bool YoloDetection::Detect()
             float confidence = dets[0][i][4].item().toFloat();
             int classID  = dets[0][i][5].item().toInt();
 
-            if (classID >= 0 && classID < (int)mClassnames.size())
-            {
-                cv::Rect2i rect(left, top, right - left, bottom - top);
-                mmDetectMap[mClassnames[classID]].push_back(rect);
+            if (classID >= 0 && classID < (int)mClassnames.size()) {
+                int x = std::max(0, (int)std::round(left));
+                int y = std::max(0, (int)std::round(top));
+                int w = std::max(1, (int)std::round(right - left));
+                int h = std::max(1, (int)std::round(bottom - top));
+                cv::Rect2i rect(x, y, w, h);
 
+                // 내부용 맵/동적영역 유지
+                mmDetectMap[mClassnames[classID]].push_back(rect);
                 if (count(mvDynamicNames.begin(), mvDynamicNames.end(), mClassnames[classID]))
                     mvDynamicArea.push_back(rect);
 
-                cv::rectangle(mRGB, rect, cv::Scalar(0, 255, 0), 2);
-                cv::putText(mRGB, mClassnames[classID] + " " + std::to_string(confidence).substr(0, 4),
-                            cv::Point(left, top - 5),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
+                DetectionResult dr;
+                dr.box = rect;
+                dr.label = mClassnames[classID];
+                dr.confidence = confidence;
+                mvDetections.push_back(dr);
             }
         }
-        std::cout << "[YOLO] Detection success: " << dets[0].sizes()[0] << " objects detected" << std::endl;
-    }
-    else
-    {
+
+        std::cout << "[YOLO] Detection success: " << dets[0].sizes()[0]
+                  << " objects detected | mvDetections=" << mvDetections.size() << std::endl;
+    } else {
         std::cout << "[YOLO] No objects detected." << std::endl;
     }
 
-    return true;
+    // mRGB가 비어있지 않으면 true를 내보내는 기존 로직을 유지해도 되지만,
+    // 정확히 하려면 (mvDetections.size()>0)로 반환하는 게 낫다:
+    return !mvDetections.empty();
 }
 
 std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor preds, float score_thresh, float iou_thresh)
@@ -142,8 +143,7 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
               << " | Max score: " << scores.max().item<float>() << std::endl;
 
     torch::Tensor mask = scores > score_thresh;
-    if (mask.sum().item<int>() == 0)
-    {
+    if (mask.sum().item<int>() == 0) {
         std::cout << "[YOLO] No detections above threshold." << std::endl;
         return output;
     }
@@ -166,11 +166,11 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
 
     torch::Tensor areas = (pred.select(1, 2) - pred.select(1, 0)) *
                           (pred.select(1, 3) - pred.select(1, 1));
+
     auto [_, idxs] = torch::sort(pred.select(1, 4), 0, true);
 
     std::vector<int64_t> keep;
-    while (idxs.size(0) > 0)
-    {
+    while (idxs.size(0) > 0) {
         int64_t i = idxs[0].item<int64_t>();
         keep.push_back(i);
 
