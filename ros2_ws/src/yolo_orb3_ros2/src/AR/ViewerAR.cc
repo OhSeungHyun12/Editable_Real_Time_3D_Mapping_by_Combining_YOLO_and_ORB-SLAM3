@@ -1,113 +1,100 @@
 #include "ViewerAR.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <pangolin/pangolin.h>
-#include <mutex>
+#include <iostream>
 
 namespace ORB_SLAM3
 {
 
-ViewerAR::ViewerAR()
-    : mFPS(30.0f), mT(33.3f), fx(0), fy(0), cx(0), cy(0), mStatus(0)
-{
-}
-
-// 이미지와 포즈 설정
-void ViewerAR::SetImagePose(const cv::Mat &im, const cv::Mat &Tcw, const int &status,
-                            const std::vector<cv::KeyPoint> &vKeys, const std::vector<MapPoint *> &vMPs)
-{
-    std::lock_guard<std::mutex> lock(mMutexPoseImage);
-    im.copyTo(mImage);
-    mTcw = Tcw.clone();
-    mStatus = status;
-    mvKeys = vKeys;
-    mvMPs = vMPs;
-}
-
-void ViewerAR::GetImagePose(cv::Mat &im, cv::Mat &Tcw, int &status,
-                            std::vector<cv::KeyPoint> &vKeys, std::vector<MapPoint *> &vMPs)
-{
-    std::lock_guard<std::mutex> lock(mMutexPoseImage);
-    im = mImage.clone();
-    Tcw = mTcw.clone();
-    status = mStatus;
-    vKeys = mvKeys;
-    vMPs = mvMPs;
-}
-
-// YOLO 감지 결과 그리기
-void DrawBoundingBoxes(cv::Mat &im, const std::vector<Detection> &detections)
-{
-    for (const auto &det : detections)
+    void ViewerAR::Run()
     {
-        cv::Rect box(det.x, det.y, det.w, det.h);
-        cv::rectangle(im, box, cv::Scalar(0, 255, 0), 2);
-
-        std::string label_text = det.label + " " + std::to_string(det.confidence).substr(0, 4);
-        cv::putText(im, label_text, cv::Point(det.x, det.y - 5),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
-    }
-}
-
-// Pangolin을 이용한 AR 뷰어 실행
-void ViewerAR::Run()
-{
-    pangolin::CreateWindowAndBind("ORB-SLAM3 AR Viewer", 1024, 768);
-    glEnable(GL_DEPTH_TEST);
-
-    pangolin::OpenGlRenderState s_cam(
-        pangolin::ProjectionMatrix(1024, 768, fx, fy, cx, cy, 0.1, 1000),
-        pangolin::ModelViewLookAt(0, -0.7, -1.8, 0, 0, 0, 0.0, -1.0, 0.0));
-
-    pangolin::View &d_cam = pangolin::CreateDisplay()
-                                .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
-                                .SetHandler(new pangolin::Handler3D(s_cam));
-
-    pangolin::GlTexture imageTexture(1024, 768, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
-
-    while (!pangolin::ShouldQuit())
-    {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        cv::Mat im;
-        cv::Mat Tcw;
-        int status;
-        std::vector<cv::KeyPoint> vKeys;
-        std::vector<MapPoint *> vMPs;
-
-        {
-            std::lock_guard<std::mutex> lock(mMutexPoseImage);
-            if (mImage.empty())
-                continue;
-            im = mImage.clone();
-            Tcw = mTcw.clone();
-            status = mStatus;
-            vKeys = mvKeys;
-            vMPs = mvMPs;
+        // 1) 첫 유효 프레임 대기(빈 업로드 방지)
+        cv::Mat first;
+        while (first.empty()) {
+            {
+                std::lock_guard<std::mutex> lk(mMutexLatestFrame);
+                if (!mLatestFrame.empty()) first = mLatestFrame.clone();
+            }
+            cv::waitKey(1);
         }
 
-        // YOLO 감지 결과 가져오기
-        std::vector<Detection> detections;
-        {
-            std::lock_guard<std::mutex> detLock(mMutexDetections);
-            detections = mDetections;
+        const int w = first.cols;
+        const int h = first.rows;
+
+        // 2) Pangolin 최소 텍스처 렌더
+        pangolin::CreateWindowAndBind("YOLO-ORB: Current Frame", w, h);
+        glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);               // 2D 텍스처는 depth 불필요
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);  // 행 정렬 이슈 방지
+
+        pangolin::DisplayBase().SetBounds(0.0,1.0,0.0,1.0);
+        pangolin::GlTexture tex(w, h, GL_RGBA8, false, 0, GL_RGBA, GL_UNSIGNED_BYTE);
+
+        while (!pangolin::ShouldQuit()) {
+            // 최신 스냅샷
+            cv::Mat im_bgr;
+            {
+                std::lock_guard<std::mutex> lk(mMutexLatestFrame);
+                if (!mLatestFrame.empty()) im_bgr = mLatestFrame.clone();
+            }
+
+            std::vector<Detection> dets_snapshot;
+            {
+                std::lock_guard<std::mutex> lk(mMutexDetections);
+                dets_snapshot = mDetections;
+            }
+
+            if (!im_bgr.empty()) {
+                // (디버그) det=N + 테스트 박스: 파이프 확인
+                const std::string dbg = "det=" + std::to_string(dets_snapshot.size());
+                cv::putText(im_bgr, dbg, {10, 30}, cv::FONT_HERSHEY_SIMPLEX, 1.0, {0,255,0}, 2);
+                cv::rectangle(im_bgr, cv::Rect(10, 50, 100, 60), {255,255,255}, 2);
+
+                // YOLO 박스 그리기(좌표 클램프)
+                if (!dets_snapshot.empty())
+                    DrawBoundingBoxes(im_bgr, dets_snapshot);
+                
+                std::cout << "[VIEWER] draw dets=" << dets_snapshot.size() << std::endl;
+
+                // BGR -> RGBA (GL_RGBA8 텍스처 업로드)
+                cv::Mat im_rgba;
+                cv::cvtColor(im_bgr, im_rgba, cv::COLOR_BGR2RGBA);
+                if (!im_rgba.isContinuous()) im_rgba = im_rgba.clone();
+
+                glClearColor(0.1f,0.1f,0.1f,1.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                tex.Upload(im_rgba.data, GL_RGBA, GL_UNSIGNED_BYTE);
+                tex.RenderToViewportFlipY();
+            }
+
+            pangolin::FinishFrame();
+            cv::waitKey(1); // 이벤트 펌프 보조
         }
 
-        // YOLO 결과 그리기
-        DrawBoundingBoxes(im, detections);
-
-        // 이미지 텍스처로 Pangolin 뷰어에 표시
-        imageTexture.Upload(im.data, GL_BGR, GL_UNSIGNED_BYTE);
-        d_cam.Activate(s_cam);
-        glColor3f(1.0, 1.0, 1.0);
-        imageTexture.RenderToViewportFlipY();
-
-        pangolin::FinishFrame();
-
-        // OpenCV 디버그 창에도 출력
-        cv::imshow("YOLO + ORB-SLAM3", im);
-        cv::waitKey(1);
+        std::cout << "ViewerAR thread finished.\n";
     }
-}
+
+    void DrawBoundingBoxes(cv::Mat& im_bgr, const std::vector<Detection>& dets)
+    {
+        const int W = im_bgr.cols, H = im_bgr.rows;
+
+        for (const auto& d : dets) {
+            // 좌표 클램프(프레임 바깥/음수 보호)
+            int x = std::max(0, std::min(d.x, W - 1));
+            int y = std::max(0, std::min(d.y, H - 1));
+            int w = std::max(1, std::min(d.w, W - x));
+            int h = std::max(1, std::min(d.h, H - y));
+
+            cv::Rect box(x, y, w, h);
+            cv::rectangle(im_bgr, box, {0,0,255}, 3);
+
+            int bl = 0;
+            auto sz = cv::getTextSize(d.label, cv::FONT_HERSHEY_SIMPLEX, 0.7, 2, &bl);
+            int y0 = std::max(0, y - sz.height - bl);
+            int y1 = std::max(0, y);
+            cv::rectangle(im_bgr, {x, y0}, {x+sz.width, y1}, {0,0,255}, cv::FILLED);
+            cv::putText(im_bgr, d.label, {x, y1 - bl}, cv::FONT_HERSHEY_SIMPLEX, 0.7, {255,255,255}, 2);
+        }
+    }
 
 } // namespace ORB_SLAM3
