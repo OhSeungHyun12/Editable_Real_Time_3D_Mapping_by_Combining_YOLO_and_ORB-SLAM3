@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <algorithm>
 
 YoloDetection::YoloDetection()
     : device(torch::kCPU)
@@ -56,11 +57,22 @@ bool YoloDetection::Detect()
     lastFrameTime = currentTime;
     std::cout << "[YOLO] Frame received: " << mRGB.cols << "x" << mRGB.rows << " | FPS: " << fps << std::endl;
 
-    // 1. YOLO 입력 이미지 전처리
-    cv::Mat resized;
-    cv::resize(mRGB, resized, cv::Size(640, 640));
-    cv::Mat img;
-    cv::cvtColor(resized, img, cv::COLOR_BGR2RGB);
+    // 1. YOLO 입력 이미지 전처리 (letterbox)
+    const int IN = 640;
+    float gain = std::min(IN / (float)mRGB.cols, IN / (float)mRGB.rows);
+    int   new_w = (int)std::round(mRGB.cols * gain);
+    int   new_h = (int)std::round(mRGB.rows * gain);
+    int   pad_left = (IN - new_w) / 2;
+    int   pad_top  = (IN - new_h) / 2;
+
+    cv::Mat img(IN, IN, CV_8UC3, cv::Scalar(114,114,114));
+    if (new_w > 0 && new_h > 0) {
+        cv::Mat resized;
+        cv::resize(mRGB, resized, cv::Size(new_w, new_h));
+        resized.copyTo(img(cv::Rect(pad_left, pad_top, new_w, new_h)));
+    }
+    cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    
 
     torch::Tensor imgTensor = torch::from_blob(img.data, {1, img.rows, img.cols, 3}, torch::kByte);
     imgTensor = imgTensor.permute({0, 3, 1, 2}).toType(torch::kFloat) / 255.0;
@@ -82,32 +94,31 @@ bool YoloDetection::Detect()
     preds = preds.squeeze(0).transpose(0, 1);
 
     // 3. NMS
-    auto dets = YoloDetection::non_max_suppression(preds, 0.05, 0.5);
+    auto dets = YoloDetection::non_max_suppression(preds, 0.35, 0.5);   // conf=0.4, IoU=0.5
 
     if (!dets.empty()) {
-        float scaleX = static_cast<float>(mRGB.cols) / 640.0f;
-        float scaleY = static_cast<float>(mRGB.rows) / 640.0f;
-
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
-            float left   = dets[0][i][0].item().toFloat() * scaleX;
-            float top    = dets[0][i][1].item().toFloat() * scaleY;
-            float right  = dets[0][i][2].item().toFloat() * scaleX;
-            float bottom = dets[0][i][3].item().toFloat() * scaleY;
-            float confidence = dets[0][i][4].item().toFloat();
-            int classID  = dets[0][i][5].item().toInt();
+            // 역보정 (전처리와 동일한 정수 pad/실제 gain 사용)
+            float left   = (dets[0][i][0].item<float>() - pad_left) / gain;
+            float top    = (dets[0][i][1].item<float>() - pad_top ) / gain;
+            float right  = (dets[0][i][2].item<float>() - pad_left) / gain;
+            float bottom = (dets[0][i][3].item<float>() - pad_top ) / gain;
+
+            // confidence / classID 추출
+            float confidence = dets[0][i][4].item<float>();
+            int   classID    = dets[0][i][5].item<int>();
+            
+            int x = std::clamp((int)std::round(left),  0, mRGB.cols - 1);
+            int y = std::clamp((int)std::round(top),   0, mRGB.rows - 1);
+            int w = std::clamp((int)std::round(right  - left), 1, mRGB.cols - x);
+            int h = std::clamp((int)std::round(bottom - top ), 1, mRGB.rows - y);
+            cv::Rect2i rect(x, y, w, h);
 
             if (classID >= 0 && classID < (int)mClassnames.size()) {
-                int x = std::max(0, (int)std::round(left));
-                int y = std::max(0, (int)std::round(top));
-                int w = std::max(1, (int)std::round(right - left));
-                int h = std::max(1, (int)std::round(bottom - top));
-                cv::Rect2i rect(x, y, w, h);
-
-                // 내부용 맵/동적영역 유지
                 mmDetectMap[mClassnames[classID]].push_back(rect);
-                if (count(mvDynamicNames.begin(), mvDynamicNames.end(), mClassnames[classID]))
-                    mvDynamicArea.push_back(rect);
-
+                if (std::count(mvDynamicNames.begin(), mvDynamicNames.end(), mClassnames[classID]))
+                mvDynamicArea.push_back(rect);
+                
                 DetectionResult dr;
                 dr.box = rect;
                 dr.label = mClassnames[classID];
@@ -130,8 +141,8 @@ bool YoloDetection::Detect()
 std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor preds, float score_thresh, float iou_thresh)
 {
     std::vector<torch::Tensor> output;
-    preds = preds.unsqueeze(0).permute({0, 2, 1});
-    torch::Tensor pred = preds[0];
+    // [8400, 84]
+    torch::Tensor pred = preds;     
 
     torch::Tensor obj_conf = pred.select(1, 4).unsqueeze(1).sigmoid();
     torch::Tensor class_conf = pred.slice(1, 5, pred.size(1)).sigmoid();
