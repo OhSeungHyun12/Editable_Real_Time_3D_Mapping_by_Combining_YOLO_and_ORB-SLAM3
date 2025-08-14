@@ -102,6 +102,7 @@ alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is 
 #
 alias venvs="ls ~/venvs"
 alias ORB_SLAM3_venv="source ~/venvs/ORB_SLAM3_venv/bin/activate"
+alias yolo11="source ~/venvs/yolo11/bin/activate"
 
 # ---------------------------
 # ROS Package Path
