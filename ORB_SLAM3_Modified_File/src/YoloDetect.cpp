@@ -42,6 +42,8 @@ YoloDetection::~YoloDetection() {}
 
 bool YoloDetection::Detect()
 {
+    
+
     mvDetections.clear();
     mvDynamicArea.clear();
     mmDetectMap.clear();
@@ -94,7 +96,7 @@ bool YoloDetection::Detect()
     preds = preds.squeeze(0).transpose(0, 1);
 
     // 3. NMS
-    auto dets = YoloDetection::non_max_suppression(preds, 0.35, 0.5);   // conf=0.4, IoU=0.5
+    auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);   // conf=0.35, IoU=0.5
 
     if (!dets.empty()) {
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
@@ -136,22 +138,34 @@ bool YoloDetection::Detect()
     // mRGB가 비어있지 않으면 true를 내보내는 기존 로직을 유지해도 되지만,
     // 정확히 하려면 (mvDetections.size()>0)로 반환하는 게 낫다:
     return !mvDetections.empty();
+
+
 }
 
 std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor preds, float score_thresh, float iou_thresh)
 {
-    std::vector<torch::Tensor> output;
-    // [8400, 84]
-    torch::Tensor pred = preds;     
+    std::vector<torch::Tensor> output;    
+    torch::Tensor pred = preds;     // [8400, 84]
 
-    torch::Tensor obj_conf = pred.select(1, 4).unsqueeze(1).sigmoid();
-    torch::Tensor class_conf = pred.slice(1, 5, pred.size(1)).sigmoid();
-    auto [max_conf, max_cls] = torch::max(class_conf, 1);
-    torch::Tensor scores = obj_conf.squeeze(1) * max_conf;
+    const bool has_obj = (pred.size(1) == 85);
+    
+    torch::Tensor class_conf, max_conf, max_cls, scores;
+    if (has_obj) {
+        // v5 스타일일 때만 obj * cls
+        class_conf = pred.slice(1, 5, pred.size(1)).sigmoid();
+        std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
+        torch::Tensor obj_conf = pred.select(1, 4).sigmoid();
+        scores = obj_conf * max_conf;
+    } else {
+        // v8/11: obj 없음 → 클래스 확률만 사용
+        class_conf = pred.slice(1, 4, pred.size(1)).sigmoid(); // ★ 4부터!
+        std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
+        scores = max_conf;
+    }
 
     std::cout << "[YOLO] Candidates before threshold: " << scores.size(0) << std::endl;
-    std::cout << "[YOLO] Max obj conf: " << obj_conf.max().item<float>()
-              << " | Max score: " << scores.max().item<float>() << std::endl;
+    std::cout << "[YOLO] Max score: " << scores.max().item<float>() << std::endl;
+
 
     torch::Tensor mask = scores > score_thresh;
     if (mask.sum().item<int>() == 0) {
