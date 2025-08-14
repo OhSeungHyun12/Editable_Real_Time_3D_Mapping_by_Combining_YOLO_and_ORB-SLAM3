@@ -16,6 +16,7 @@ this project uses YOLOv11 for object detection and integrates the detected objec
   
     Generate high-precision 3D maps that visually represent detected objects and the surrounding terrain based on object recognition.
 ---
+<img width="269" height="233" alt="YOLO_ORB" src="https://github.com/user-attachments/assets/0428aa05-bf12-4e09-ae23-cd5dd3ea471e" />
 
 ## Getting Started
 
