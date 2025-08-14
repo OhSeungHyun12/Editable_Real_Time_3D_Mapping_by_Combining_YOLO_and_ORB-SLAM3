@@ -96,7 +96,7 @@ bool YoloDetection::Detect()
     preds = preds.squeeze(0).transpose(0, 1);
 
     // 3. NMS
-    auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);   // conf=0.35, IoU=0.5
+    auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);   // conf=0.6, IoU=0.5
 
     if (!dets.empty()) {
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
@@ -135,8 +135,6 @@ bool YoloDetection::Detect()
         std::cout << "[YOLO] No objects detected." << std::endl;
     }
 
-    // mRGB가 비어있지 않으면 true를 내보내는 기존 로직을 유지해도 되지만,
-    // 정확히 하려면 (mvDetections.size()>0)로 반환하는 게 낫다:
     return !mvDetections.empty();
 
 
@@ -151,13 +149,11 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
     
     torch::Tensor class_conf, max_conf, max_cls, scores;
     if (has_obj) {
-        // v5 스타일일 때만 obj * cls
         class_conf = pred.slice(1, 5, pred.size(1)).sigmoid();
         std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
         torch::Tensor obj_conf = pred.select(1, 4).sigmoid();
         scores = obj_conf * max_conf;
     } else {
-        // v8/11: obj 없음 → 클래스 확률만 사용
         class_conf = pred.slice(1, 4, pred.size(1)).sigmoid(); // ★ 4부터!
         std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
         scores = max_conf;
