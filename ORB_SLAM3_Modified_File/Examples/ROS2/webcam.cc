@@ -11,16 +11,14 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    if (argc != 3)
-    {
+    if (argc != 3) {
         cerr << "Usage: ./webcam path_to_vocabulary path_to_settings" << endl;
         return 1;
     }
 
     // Read settings
     cv::FileStorage fsSettings(argv[2], cv::FileStorage::READ);
-    if (!fsSettings.isOpened())
-    {
+    if (!fsSettings.isOpened()) {
         cerr << "Failed to open settings file at " << argv[2] << endl;
         return 1;
     }
@@ -31,8 +29,7 @@ int main(int argc, char **argv)
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 640);
     cap.set(cv::CAP_PROP_FPS, 30);
     
-    if (!cap.isOpened())
-    {
+    if (!cap.isOpened()) {
         cerr << "ERROR: Unable to open webcam" << endl;
         return 1;
     }
@@ -54,8 +51,7 @@ int main(int argc, char **argv)
         if (bRGB)
             cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
 
-        if (imageScale != 1.f)
-        {
+        if (imageScale != 1.f) {
             cv::resize(frame, frame, cv::Size(), imageScale, imageScale);
         }
 
@@ -64,7 +60,7 @@ int main(int argc, char **argv)
 
         SLAM.TrackMonocular(frame, timestamp);
 
-        // Pangolin 뷰어만 사용하도록 OpenCV UI 제거
+        // Remove OpenCV UI -> Use Pangolin viewer
         if ((cv::waitKey(1) & 0xFF) == 27) break;
     }
 
