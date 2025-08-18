@@ -28,19 +28,19 @@ public:
     void SetFPS(float fps) { mFPS = fps; mT = (fps > 0.f ? 1000.f / fps : 0.f); }
     void SetCameraCalibration(float fx_, float fy_, float cx_, float cy_) { fx=fx_; fy=fy_; cx=cx_; cy=cy_; }
 
-    // ROS 콜백이 최신 프레임 전달
+    // ROS callbacks pass the latest frame.
     void SetLatestFrame(const cv::Mat& im) {
         std::lock_guard<std::mutex> lk(mMutexLatestFrame);
         mLatestFrame = im.clone();
     }
 
-    // YOLO 감지 결과 전달
+    // Send YOLO detection result
     void SetDetections(const std::vector<Detection>& dets) {
         std::lock_guard<std::mutex> lk(mMutexDetections);
         mDetections = dets;
     }
 
-    // Pangolin 렌더 루프
+    // Pangolin render loop
     void Run();
 
 private:
@@ -52,15 +52,15 @@ private:
 
     System* mpSystem;
 
-    // 최신 프레임
+    // Latest Frame
     cv::Mat mLatestFrame;
     std::mutex mMutexLatestFrame;
 
-    // 감지 결과
+    // Detection results
     std::vector<Detection> mDetections;
     std::mutex mMutexDetections;
 
-    // 렌더 파라미터
+    // Render parameters
     float mFPS, mT;
     float fx, fy, cx, cy;
 };
