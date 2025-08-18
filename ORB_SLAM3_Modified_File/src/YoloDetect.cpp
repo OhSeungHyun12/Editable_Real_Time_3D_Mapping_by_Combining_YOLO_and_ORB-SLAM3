@@ -24,14 +24,14 @@ YoloDetection::YoloDetection()
 
     mModule.eval();
 
-    // 클래스 이름 로드
+    // Load class name
     std::ifstream f("coco.names");
     std::string name;
     while (std::getline(f, name)) {
         mClassnames.push_back(name);
     }
 
-    // 동적 객체 클래스
+    // Dynamic object class
     mvDynamicNames = {"person", "car", "motorbike", "bus", "train", "truck", "boat", "bird", "cat",
                       "dog", "horse", "sheep", "cow", "bear"};
 
@@ -53,13 +53,13 @@ bool YoloDetection::Detect()
         return false;
     }
 
-    // FPS 측정
+    // FPS measurement
     auto currentTime = std::chrono::steady_clock::now();
     float fps = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastFrameTime).count();
     lastFrameTime = currentTime;
     std::cout << "[YOLO] Frame received: " << mRGB.cols << "x" << mRGB.rows << " | FPS: " << fps << std::endl;
 
-    // 1. YOLO 입력 이미지 전처리 (letterbox)
+    // 1) YOLO input image preprocessing (letterboxing)
     const int IN = 640;
     float gain = std::min(IN / (float)mRGB.cols, IN / (float)mRGB.rows);
     int   new_w = (int)std::round(mRGB.cols * gain);
@@ -80,7 +80,7 @@ bool YoloDetection::Detect()
     imgTensor = imgTensor.permute({0, 3, 1, 2}).toType(torch::kFloat) / 255.0;
     imgTensor = imgTensor.to(device);
 
-    // 2. YOLO 추론
+    // 2) YOLO inference
     torch::IValue output = mModule.forward({imgTensor});
     torch::Tensor preds;
 
@@ -95,18 +95,18 @@ bool YoloDetection::Detect()
     // YOLOv11 output: [1, 84, 8400] → [8400, 84]
     preds = preds.squeeze(0).transpose(0, 1);
 
-    // 3. NMS
+    // 3) NMS
     auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);   // conf=0.6, IoU=0.5
 
     if (!dets.empty()) {
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
-            // 역보정 (전처리와 동일한 정수 pad/실제 gain 사용)
+            // Inverse compensation (using the same integer pad/real gain as preprocessing)
             float left   = (dets[0][i][0].item<float>() - pad_left) / gain;
             float top    = (dets[0][i][1].item<float>() - pad_top ) / gain;
             float right  = (dets[0][i][2].item<float>() - pad_left) / gain;
             float bottom = (dets[0][i][3].item<float>() - pad_top ) / gain;
 
-            // confidence / classID 추출
+            // Extract confidence/classID
             float confidence = dets[0][i][4].item<float>();
             int   classID    = dets[0][i][5].item<int>();
             
@@ -154,7 +154,7 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
         torch::Tensor obj_conf = pred.select(1, 4).sigmoid();
         scores = obj_conf * max_conf;
     } else {
-        class_conf = pred.slice(1, 4, pred.size(1)).sigmoid(); // ★ 4부터!
+        class_conf = pred.slice(1, 4, pred.size(1)).sigmoid();
         std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
         scores = max_conf;
     }
