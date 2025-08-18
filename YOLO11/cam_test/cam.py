@@ -1,9 +1,9 @@
+import os
 import cv2
 import time
-import datetime
 import torch
+import datetime
 from ultralytics import YOLO
-import os
 
 start = time.time()
 
