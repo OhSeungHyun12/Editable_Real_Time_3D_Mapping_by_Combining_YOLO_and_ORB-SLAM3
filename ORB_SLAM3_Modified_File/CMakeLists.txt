@@ -43,12 +43,12 @@ include_directories(
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 # =========================
-# Torch Include 경로 추가
+# Add Torch Include path
 # =========================
 include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/libtorch/include)
 include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/libtorch/include/torch/csrc/api/include)
 
-# Torch 경로 설정 (CMake에 알려주기)
+# Setting the Torch path
 set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/Thirdparty/libtorch")
 
 add_library(${PROJECT_NAME} SHARED
@@ -124,7 +124,7 @@ target_link_libraries(${PROJECT_NAME}
     ${Pangolin_LIBRARIES}
     ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
     ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
-    ${TORCH_LIBRARIES}        # Torch 라이브러리 추가
+    ${TORCH_LIBRARIES}        
     -lboost_serialization
     -lcrypto
 )
@@ -394,7 +394,7 @@ if(realsense2_FOUND)
     target_link_libraries(stereo_inertial_realsense_D435i_old ${PROJECT_NAME})
 endif()
 
-# Eigen 내부 SIMD 최적화 코드에서 GCC 13의 새 경고 시스템 무시코드
+# Eigen internal SIMD optimized code -> ignores GCC 13's warning system 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=array-bounds")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
