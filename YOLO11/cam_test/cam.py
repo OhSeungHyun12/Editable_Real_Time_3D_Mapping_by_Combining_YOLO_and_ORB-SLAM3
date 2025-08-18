@@ -42,7 +42,7 @@ if not available_devices:
     print("❌ No camera devices found.")
     exit()
 
-# User input
+# User input (camera number)
 try:
     x = int(input(f"Select camera number from {available_devices}: "))
     if x not in available_devices:
@@ -51,7 +51,7 @@ except Exception:
     print("❌ Invalid camera selection")
     exit()
 
-# Model Load
+# YOLO Model Load
 model = YOLO("yolo11n.pt")  
 log_timing("Model Loaded")
 
@@ -98,7 +98,7 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Exit
+# Termination processing
 end_time = time.time()
 elapsed_time = end_time - start_time
 avg_fps = frame_count / elapsed_time if elapsed_time > 0 else 0
