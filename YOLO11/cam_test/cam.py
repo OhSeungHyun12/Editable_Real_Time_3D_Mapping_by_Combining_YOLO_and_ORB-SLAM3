@@ -21,9 +21,9 @@ log_timing("CUDA / Device Init")
 # Explore video devices
 def list_video_devices():
     # Check up to n video devices
-    n = 50
+    max_devices = 50
     devices = []
-    for i in range(n):  
+    for i in range(max_devices):  
         dev_path = f"/dev/video{i}"
         if os.path.exists(dev_path):
             cap = cv2.VideoCapture(i)
