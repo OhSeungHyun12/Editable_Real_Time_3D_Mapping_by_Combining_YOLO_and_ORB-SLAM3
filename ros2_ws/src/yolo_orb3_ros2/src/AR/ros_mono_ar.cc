@@ -113,7 +113,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // ORB 기본 Viewer는 OFF (우리 Pangolin 창과 충돌 방지)
+    // ORB 기본 Viewer는 OFF (Pangolin 창과 충돌 방지)
     ORB_SLAM3::System SLAM(argv[1], argv[2], ORB_SLAM3::System::MONOCULAR, false);
 
     YoloDetection yolo;
