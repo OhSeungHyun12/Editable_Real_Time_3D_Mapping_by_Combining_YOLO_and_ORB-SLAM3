@@ -50,16 +50,16 @@ private:
         cv::Mat frame = cv_ptr->image.clone();
         double tframe = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
 
-        // SLAM
+        // ORB SLAM3
         mpSLAM->TrackMonocular(frame, tframe);
 
-        // Viewer에 최신 프레임 전달
+        // Sends the latest frame to the viewer.
         if (mpViewer) {
             mpViewer->SetLatestFrame(frame);
             RCLCPP_INFO(this->get_logger(), "[VIEWER] SetLatestFrame: %dx%d", frame.cols, frame.rows);
         }
 
-        // YOLO 스레드에 전달
+        // Passing to YOLO thread
         {
             std::lock_guard<std::mutex> lock(mtx);
             sharedFrame = frame.clone();
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // ORB 기본 Viewer는 OFF (Pangolin 창과 충돌 방지)
+    // ORB default viewer is OFF (to avoid conflicts with Pangolin windows)
     ORB_SLAM3::System SLAM(argv[1], argv[2], ORB_SLAM3::System::MONOCULAR, false);
 
     YoloDetection yolo;
