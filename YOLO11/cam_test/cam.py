@@ -12,16 +12,18 @@ def log_timing(label):
     formatted = str(datetime.timedelta(seconds=sec)).split(".")[0]
     print(f"[{label:<30}] ⏱ {formatted}")
 
-# CUDA 확인
+# Check CUDA 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("CUDA is available:", torch.cuda.is_available())
 print(f"Using device: {device}")
 log_timing("CUDA / Device Init")
 
-# 📸 비디오 장치 탐색 (리눅스 전용: /dev/video*)
+# Explore video devices
 def list_video_devices():
+    # Check up to n video devices
+    n = 50
     devices = []
-    for i in range(50):  # 최대 10개까지 확인
+    for i in range(n):  
         dev_path = f"/dev/video{i}"
         if os.path.exists(dev_path):
             cap = cv2.VideoCapture(i)
@@ -40,7 +42,7 @@ if not available_devices:
     print("❌ No camera devices found.")
     exit()
 
-# 사용자 입력
+# User input
 try:
     x = int(input(f"Select camera number from {available_devices}: "))
     if x not in available_devices:
@@ -49,17 +51,17 @@ except Exception:
     print("❌ Invalid camera selection")
     exit()
 
-# 모델 로드
-model = YOLO("LAB_best.pt")  # 또는 yolov11.pt
+# Model Load
+model = YOLO("yolo11n.pt")  
 log_timing("Model Loaded")
 
-# 웹캠 연결
+# Webcam connection
 capture = cv2.VideoCapture(x)
 if not capture.isOpened():
     print("❌ Can't open webcam.")
     exit()
 
-# 해상도 설정
+# Resolution settings
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 640)
 
@@ -80,11 +82,11 @@ while True:
     prev_time = curr_time
     frame_count += 1
 
-    # YOLOv11 감지
+    # YOLOv11 detection
     results = model(frame)
     annotated_frame = results[0].plot()
 
-    # 정보 표시
+    # Display information
     fps_info = f"term = {term:.3f}s, FPS = {fps:.2f}"
     frame_info = f"Frame: {frame_count}"
     cv2.putText(annotated_frame, fps_info, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 255), 2)
@@ -96,7 +98,7 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# 종료
+# Exit
 end_time = time.time()
 elapsed_time = end_time - start_time
 avg_fps = frame_count / elapsed_time if elapsed_time > 0 else 0
