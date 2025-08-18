@@ -1,5 +1,5 @@
 #include "ViewerAR.h"
-#include "../../../include/System.h"      // ORB_SLAM3 System
+#include "../../../include/System.h"      
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
@@ -14,7 +14,7 @@ void ViewerAR::Run()
         return;
     }
 
-    // 1) 첫 프레임 대기
+    // 1) Wait for the first frame
     cv::Mat first;
     while (first.empty()) {
         {
@@ -26,7 +26,7 @@ void ViewerAR::Run()
 
     const int w = first.cols, h = first.rows;
 
-    // 2) Pangolin 초기화
+    // 2) Pangolin Reset
     pangolin::CreateWindowAndBind("YOLO-ORB-SLAM3: Current Frame", w, h);
     glEnable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
@@ -35,19 +35,19 @@ void ViewerAR::Run()
     pangolin::GlTexture tex(w, h, GL_RGBA8, false, 0, GL_RGBA, GL_UNSIGNED_BYTE);
 
     while (!pangolin::ShouldQuit()) {
-        // 최신 프레임 스냅샷
+        // Latest frame snapshot
         cv::Mat im_bgr;
         {
             std::lock_guard<std::mutex> lk(mMutexLatestFrame);
             if (!mLatestFrame.empty()) im_bgr = mLatestFrame.clone();
         }
 
-        // SLAM 상태/포인트 스냅샷 (공개 API)
+        // SLAM State/Point Snapshot
         int status = mpSystem->GetTrackingState();
         auto vKeys = mpSystem->GetTrackedKeyPointsUn();
         auto vMPs  = mpSystem->GetTrackedMapPoints();
 
-        // YOLO 감지 스냅샷
+        // YOLO detection snapshot
         std::vector<Detection> dets;
         {
             std::lock_guard<std::mutex> lk(mMutexDetections);
@@ -55,20 +55,20 @@ void ViewerAR::Run()
         }
 
         if (!im_bgr.empty()) {
-            // 상태 텍스트
+            // Status text
             if (status == 1)      AddTextToImage("SLAM NOT INITIALIZED", im_bgr, 255, 0, 0);
             else if (status == 2) AddTextToImage("SLAM ON",               im_bgr, 0, 255, 0);
             else if (status == 3) AddTextToImage("SLAM LOST",             im_bgr, 255, 0, 0);
 
-            // 트래킹된 포인트
+            // Tracked points
             if (!vKeys.empty() && !vMPs.empty())
                 DrawTrackedPoints(vKeys, vMPs, im_bgr);
 
-            // YOLO 박스
+            // YOLO object detection box
             if (!dets.empty())
                 DrawBoundingBoxes(im_bgr, dets);
 
-            // 렌더
+            // Render
             cv::Mat rgba;
             cv::cvtColor(im_bgr, rgba, cv::COLOR_BGR2RGBA);
             glClearColor(0.1f,0.1f,0.1f,1.0f);
