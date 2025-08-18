@@ -1,30 +1,31 @@
 import cv2
 
-# 웹캠 열기 (0은 기본 웹캠을 의미)
-cap = cv2.VideoCapture(1)
+n = 48
+# Open webcam
+cap = cv2.VideoCapture(n)
 
-# 웹캠이 정상적으로 열렸는지 확인
+# Check if the webcam is opened properly
 if not cap.isOpened():
-    print("오류: 웹캠을 열 수 없습니다.")
+    print("Error: Unable to open webcam.")
     exit()
 
-# 비디오 프레임을 계속해서 읽어와 화면에 표시
+# Continuously read video frames and display them on the screen
 while True:
-    # 프레임 읽기
+    # Reading frames
     ret, frame = cap.read()
 
-    # 프레임을 성공적으로 읽었는지 확인
+    # Check if the frame was read successfully
     if not ret:
-        print("오류: 프레임을 읽을 수 없습니다.")
+        print("Error: Could not read frame.")
         break
 
-    # 읽어온 프레임을 'Webcam'이라는 이름의 창에 표시
+    # Display the read frames in a window named 'Webcam'
     cv2.imshow('Webcam', frame)
 
-    # 'q' 키를 누르면 반복문 종료
+    # Press the 'q' key to end the loop.
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# 사용이 끝난 후, 자원 해제
+# After use, release the resource
 cap.release()
 cv2.destroyAllWindows()
