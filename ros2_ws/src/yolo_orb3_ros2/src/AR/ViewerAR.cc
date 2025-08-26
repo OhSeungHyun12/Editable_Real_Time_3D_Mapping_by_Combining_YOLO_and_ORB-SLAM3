@@ -34,8 +34,7 @@ void ViewerAR::Run()
     pangolin::DisplayBase().SetBounds(0.0, 1.0, 0.0, 1.0);
     pangolin::GlTexture tex(w, h, GL_RGBA8, false, 0, GL_RGBA, GL_UNSIGNED_BYTE);
 
-    while (!pangolin::ShouldQuit()) {
-        // Latest frame snapshot
+    while (!pangolin::ShouldQuit() && !(mpStopSignal && mpStopSignal->load())) {
         cv::Mat im_bgr;
         {
             std::lock_guard<std::mutex> lk(mMutexLatestFrame);
@@ -71,8 +70,7 @@ void ViewerAR::Run()
             // Render
             cv::Mat rgba;
             cv::cvtColor(im_bgr, rgba, cv::COLOR_BGR2RGBA);
-            glClearColor(0.1f,0.1f,0.1f,1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             tex.Upload(rgba.data, GL_RGBA, GL_UNSIGNED_BYTE);
             tex.RenderToViewportFlipY();
         }
@@ -118,8 +116,8 @@ void ViewerAR::DrawTrackedPoints(const std::vector<cv::KeyPoint>& vKeys,
 void ViewerAR::AddTextToImage(const std::string& s, cv::Mat& im, int r, int g, int b)
 {
     int l = 10;
-    cv::putText(im, s, {l, im.rows - l}, cv::FONT_HERSHEY_PLAIN, 1.5, {255,255,255}, 2, 8);
-    cv::putText(im, s, {l, im.rows - l}, cv::FONT_HERSHEY_PLAIN, 1.5, {r,g,b}, 2, 8);
+    cv::putText(im, s, {l, im.rows - l}, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(255,255,255), 2, 8);
+    cv::putText(im, s, {l, im.rows - l}, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(b,g,r), 2, 8);
 }
 
 } // namespace ORB_SLAM3
