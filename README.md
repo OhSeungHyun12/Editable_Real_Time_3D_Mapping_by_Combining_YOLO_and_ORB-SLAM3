@@ -82,7 +82,6 @@ You can add to this code or change it if you want.
 # ---------------------------
 # Aliases list
 # ---------------------------
-yolo_orb3_ros2
 echo "To see aliases list type: my_aliases"
 my_aliases() {
     echo -e "💡 List of available aliases."
