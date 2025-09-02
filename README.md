@@ -221,7 +221,10 @@ realsense-viewer
 
 Install CUDA 11.8 LibTorch and put it in ORB_SLAM3/Thirdparty.
 ```
+cd ~/YOLO_ORB_SLAM3/ORB_SLAM3/Thirdparty
 wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu118.zip
+unzip libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
+rm libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
 ```
 
 ### 3. Build
@@ -232,6 +235,7 @@ cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
+
 #### Build ROS2
 ```
 cd ~/ros2_ws
