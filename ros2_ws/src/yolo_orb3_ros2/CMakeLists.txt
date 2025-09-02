@@ -25,6 +25,7 @@ find_package(OpenCV 4 REQUIRED)
 find_package(Eigen3 3 REQUIRED) 
 find_package(Pangolin REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
+find_package(tf2_geometry_msgs REQUIRED)
 
 # Setting and finding the Torch (libtorch) path
 set(Torch_DIR "${ORB_SLAM3_ROOT}/Thirdparty/libtorch/share/cmake/Torch")
@@ -75,16 +76,32 @@ target_link_libraries(mono
 add_executable(rgbd src/ros_rgbd.cc)
 ament_target_dependencies(rgbd rclcpp cv_bridge sensor_msgs image_transport tf2 tf2_ros)
 target_link_libraries(rgbd
-    ORB_SLAM3::ORB_SLAM3 ORB_SLAM3::g2o ORB_SLAM3::DBoW2
-    ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${EIGEN3_LIBS} ${Pangolin_LIBRARIES} Boost::system
+    ORB_SLAM3::ORB_SLAM3 
+    ORB_SLAM3::g2o 
+    ORB_SLAM3::DBoW2
+    ${OpenCV_LIBS} 
+    ${TORCH_LIBRARIES} 
+    ${EIGEN3_LIBS} 
+    ${Pangolin_LIBRARIES} 
+    Boost::system
 )
 
 add_executable(mono_ar src/AR/ros_mono_ar.cc src/AR/ViewerAR.cc)
-ament_target_dependencies(mono_ar rclcpp cv_bridge sensor_msgs image_transport tf2 tf2_ros)
+ament_target_dependencies(mono_ar rclcpp cv_bridge sensor_msgs image_transport tf2 tf2_ros tf2_geometry_msgs)
 target_link_libraries(mono_ar
-    ORB_SLAM3::ORB_SLAM3 ORB_SLAM3::g2o ORB_SLAM3::DBoW2
-    ${OpenCV_LIBS} ${TORCH_LIBRARIES} ${EIGEN3_LIBS} ${Pangolin_LIBRARIES} Boost::system
+  ORB_SLAM3::ORB_SLAM3 
+  ORB_SLAM3::g2o 
+  ORB_SLAM3::DBoW2
+  ${OpenCV_LIBS}
+  ${TORCH_LIBRARIES}
+  ${EIGEN3_LIBS}
+  ${Pangolin_LIBRARIES}
+  OpenGL::GL      
+  Boost::system
 )
+
+# Install config files
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 # Installing executables and launch files
 install(TARGETS mono rgbd mono_ar DESTINATION lib/${PROJECT_NAME})
