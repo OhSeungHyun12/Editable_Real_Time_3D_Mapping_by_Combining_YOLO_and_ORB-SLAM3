@@ -65,7 +65,8 @@ sudo dpkg -i /tmp/ros2-apt-source.deb
 # Install ROS 2 and dev tools
 ```
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools
+sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools \
+                    ros-jazzy-topic-tools ros-jazzy-tf2-ros ros-jazzy-tf2-geometry-msgs ros-jazzy-v4l2-camera
 ```
 
 > **Make Virtual Environment**
