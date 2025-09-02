@@ -11,8 +11,13 @@ YoloDetection::YoloDetection()
 {
     torch::jit::setTensorExprFuserEnabled(false);
 
-    // YOLOv11 model
-    mModule = torch::jit::load("yolo11n.torchscript.pt");
+    // 1) Save file path
+
+    std::string model_path = "/home/ruherpan/YOLO_ORB_SLAM3/ORB_SLAM3/yolo11n.torchscript.pt";
+    std::string names_path = "/home/ruherpan/YOLO_ORB_SLAM3/ORB_SLAM3/coco.names";
+
+    // 2) YOLOv11 model
+    mModule = torch::jit::load(model_path);
     if (torch::cuda::is_available()) {
         device = torch::Device(torch::kCUDA);
         std::cout << "[YOLO] Using GPU for inference" << std::endl;
@@ -24,8 +29,8 @@ YoloDetection::YoloDetection()
 
     mModule.eval();
 
-    // Load class name
-    std::ifstream f("coco.names");
+    // 3) Load class name
+    std::ifstream f(names_path);
     std::string name;
     while (std::getline(f, name)) {
         mClassnames.push_back(name);
@@ -41,9 +46,7 @@ YoloDetection::YoloDetection()
 YoloDetection::~YoloDetection() {}
 
 bool YoloDetection::Detect()
-{
-    
-
+{  
     mvDetections.clear();
     mvDynamicArea.clear();
     mmDetectMap.clear();
@@ -53,11 +56,11 @@ bool YoloDetection::Detect()
         return false;
     }
 
-    // FPS measurement
-    auto currentTime = std::chrono::steady_clock::now();
-    float fps = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastFrameTime).count();
-    lastFrameTime = currentTime;
-    std::cout << "[YOLO] Frame received: " << mRGB.cols << "x" << mRGB.rows << " | FPS: " << fps << std::endl;
+    // // FPS measurement
+    // auto currentTime = std::chrono::steady_clock::now();
+    // float fps = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastFrameTime).count();
+    // lastFrameTime = currentTime;
+    // std::cout << "[YOLO] Frame received: " << mRGB.cols << "x" << mRGB.rows << " | FPS: " << fps << std::endl;
 
     // 1) YOLO input image preprocessing (letterboxing)
     const int IN = 640;
@@ -90,13 +93,12 @@ bool YoloDetection::Detect()
         preds = output.toTuple()->elements()[0].toTensor();
 
     preds = preds.to(torch::kCPU);
-    std::cout << "[YOLO] Output shape: " << preds.sizes() << std::endl;
-
-    // YOLOv11 output: [1, 84, 8400] → [8400, 84]
-    preds = preds.squeeze(0).transpose(0, 1);
+    // std::cout << "[YOLO] Output shape: " << preds.sizes() << std::endl;
+   
+    preds = preds.squeeze(0).transpose(0, 1);                               // YOLOv11 output: [1, 84, 8400] → [8400, 84]
 
     // 3) NMS
-    auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);   // conf=0.6, IoU=0.5
+    auto dets = YoloDetection::non_max_suppression(preds, 0.6, 0.5);        // conf=0.6, IoU=0.5
 
     if (!dets.empty()) {
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
@@ -136,8 +138,6 @@ bool YoloDetection::Detect()
     }
 
     return !mvDetections.empty();
-
-
 }
 
 std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor preds, float score_thresh, float iou_thresh)
