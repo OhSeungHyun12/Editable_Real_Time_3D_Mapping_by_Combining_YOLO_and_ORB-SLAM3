@@ -1545,5 +1545,11 @@ string System::CalculateCheckSum(string filename, int type)
     return checksum;
 }
 
+std::vector<MapPoint*> System::GetAllMapPoints()
+{
+    // private 멤버인 mpAtlas에 접근하여 Atlas의 함수를 호출
+    return mpAtlas->GetAllMapPoints();
+}
+
 } //namespace ORB_SLAM
 
