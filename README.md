@@ -117,41 +117,22 @@ alias yolo11="source ~/venvs/yolo11/bin/activate"
 # ROS Package Path + ORB-SLAM3 env
 # ---------------------------
 jazzy_yolo_orb3() {
-    source /opt/ros/jazzy/setup.bash && ros_domain
+    # ROS2 Jazzy sourcing
+    source /opt/ros/jazzy/setup.bash
+    export ROS_DOMAIN_ID=13
+    echo "ROS_DOMAIN_ID=13"
 
-    # ros2_ws overlay
+    # ros2_ws workspace overlay
     local ws_setup="$HOME/ros2_ws/install/setup.bash"
     if [ -f "$ws_setup" ]; then
         source "$ws_setup"
     fi
 
-    # ORB-SLAM3 ROOT
+    # Set ORB-SLAM3 lib dir
     export ORB_SLAM3_ROOT="$HOME/YOLO_ORB_SLAM3/ORB_SLAM3"
-    if [ ! -d "$ORB_SLAM3_ROOT" ]; then
-        echo "⚠️ ORB_SLAM3_ROOT dir not found: $ORB_SLAM3_ROOT"
-    fi
 
-    # Add runtime library path (ORB-SLAM3, libtorch)
-    case ":$LD_LIBRARY_PATH:" in
-        *":$ORB_SLAM3_ROOT/lib:"*) ;;
-        *) export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";;
-    esac
-    case ":$LD_LIBRARY_PATH:" in
-        *":$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:"*) ;;
-        *) export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:$LD_LIBRARY_PATH";;
-    esac
-
-    # Package source path(yolo_orb3_ros2)
-    local pkg_dir="$HOME/ros2_ws/src/yolo_orb3_ros2"
-    if [ -d "$pkg_dir" ]; then
-        case ":$ROS_PACKAGE_PATH:" in
-            *":$pkg_dir:"*) ;;
-            *)
-                export ROS_PACKAGE_PATH="${ROS_PACKAGE_PATH:+$ROS_PACKAGE_PATH:}$pkg_dir"
-                echo "ROS_PACKAGE_PATH += $pkg_dir"
-                ;;
-        esac
-    fi
+    # ADD ORB-SLAM3 and LibTorch lib dir
+    export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/lib:$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:$LD_LIBRARY_PATH"
 
     echo "Jazzy + workspace overlay + ORB_SLAM3 env ready ✅"
     echo "ORB_SLAM3_ROOT=$ORB_SLAM3_ROOT"
