@@ -1,26 +1,4 @@
-#include <iostream>
-#include <algorithm>
-#include <fstream>
-#include <chrono>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-#include <iomanip>
-
-#include <sophus/se3.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <cv_bridge/cv_bridge.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
-#include <torch/script.h>
-#include <torch/torch.h>
-#include "YoloDetect.h"
-#include "ViewerAR.h"
-#include "../../../include/System.h"
+#include "headers.h"
 
 using namespace std;
 
@@ -40,11 +18,74 @@ public:
         image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
             "/image_raw", 10, std::bind(&ImageGrabber::GrabImage, this, std::placeholders::_1));
 
+        // 1) Reset Publisher
+        mPosePub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/camera_pose", 10);
+        mPointCloudPub = this->create_publisher<sensor_msgs::msg::PointCloud2>("/map_points", 10);
+
+        // 2) Create a timer that calls the PublishMapAndPose function every 500ms.
+        mTimer = this->create_wall_timer(
+            std::chrono::milliseconds(500),
+            std::bind(&ImageGrabber::PublishMapAndPose, this));
+
         mTrajectoryFile << "# Camera Trajectory" << endl;
         mTrajectoryFile << "# timestamp tx ty tz qx qy qz qw" << endl;
     }
 
 private:
+    
+    void PublishMapAndPose()                            // 3) Functions that generate poses and point clouds
+    {
+        geometry_msgs::msg::PoseStamped poseMsg;
+        poseMsg.header.stamp = this->get_clock()->now();
+        poseMsg.header.frame_id = "map";                // Reference of coordinate system "___"
+
+        {
+            // Protecting mLastPose Access with a Mutex
+            std::lock_guard<std::mutex> lock(mPoseMutex);
+            if (!mLastPose.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {
+                Eigen::Vector3f p = mLastPose.translation();
+                Eigen::Quaternionf q = mLastPose.unit_quaternion();
+                poseMsg.pose.position.x = p.x();
+                poseMsg.pose.position.y = p.y();
+                poseMsg.pose.position.z = p.z();
+                poseMsg.pose.orientation.x = q.x();
+                poseMsg.pose.orientation.y = q.y();
+                poseMsg.pose.orientation.z = q.z();
+                poseMsg.pose.orientation.w = q.w();
+                mPosePub->publish(poseMsg);
+            }
+        }
+
+        std::vector<ORB_SLAM3::MapPoint*> vMPs = mpSLAM->GetAllMapPoints();
+        if(vMPs.empty()) return;
+
+        sensor_msgs::msg::PointCloud2 cloudMsg;
+        cloudMsg.header.stamp = this->get_clock()->now();
+        cloudMsg.header.frame_id = "map";
+        cloudMsg.height = 1; 
+        cloudMsg.width = vMPs.size();
+        cloudMsg.is_dense = true;
+
+        sensor_msgs::PointCloud2Modifier modifier(cloudMsg);
+        modifier.setPointCloud2FieldsByString(1, "xyz");
+        modifier.resize(vMPs.size());
+
+        sensor_msgs::PointCloud2Iterator<float> iter_x(cloudMsg, "x");
+        sensor_msgs::PointCloud2Iterator<float> iter_y(cloudMsg, "y");
+        sensor_msgs::PointCloud2Iterator<float> iter_z(cloudMsg, "z");
+
+        for (ORB_SLAM3::MapPoint* pMP : vMPs) {
+            if (pMP && !pMP->isBad()) {
+                Eigen::Vector3f pos = pMP->GetWorldPos();
+                *iter_x = pos.x();
+                *iter_y = pos.y();
+                *iter_z = pos.z();
+                ++iter_x; ++iter_y; ++iter_z;
+            }
+        }
+        mPointCloudPub->publish(cloudMsg);
+    }
+
     void GrabImage(const sensor_msgs::msg::Image::SharedPtr msg)
     {
         if (g_stop_signal) return;                      // Stop processing when a termination signal is received
@@ -66,16 +107,22 @@ private:
 
         Sophus::SE3f Tcw = mpSLAM->TrackMonocular(frame, tframe);
 
-        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0)))
-        {
-            // 월드 좌표계 기준 카메라 Pose (Twc) 계산 (Sophus 사용)
+        // 4) Latest Pose -> member variable
+        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {       
+
+            std::lock_guard<std::mutex> lock(mPoseMutex);
+            mLastPose = Tcw.inverse();
+        }
+
+        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {
+            // Calculate camera pose (Twc) relative to world coordinates
             Sophus::SE3f Twc = Tcw.inverse();
 
-            // Translation과 Quaternion 추출 (Sophus 사용)
+            // Translation and Quaternion Extraction
             Eigen::Vector3f twc = Twc.translation();
             Eigen::Quaternionf q = Twc.unit_quaternion();
 
-            // TUM 형식으로 파일에 저장: timestamp tx ty tz qx qy qz qw
+            // TUM format: timestamp tx ty tz qx qy qz qw
             mTrajectoryFile << fixed << setprecision(7) << tframe << " "
                             << twc.x() << " " << twc.y() << " " << twc.z() << " "
                             << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
@@ -102,11 +149,19 @@ private:
     ORB_SLAM3::ViewerAR* mpViewer;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     std::ofstream& mTrajectoryFile;
+
+    // 5. Member variable
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr mPosePub;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr mPointCloudPub;
+    rclcpp::TimerBase::SharedPtr mTimer;
+    Sophus::SE3f mLastPose;
+    std::mutex mPoseMutex;
 };
 
 void YoloThread(YoloDetection* yolo, ORB_SLAM3::ViewerAR* viewer)
 {
-    while (rclcpp::ok() && !g_stop_signal.load()) {     // g_stop_signal.load -> Added termination signal check
+    // g_stop_signal.load -> Added termination signal check
+    while (rclcpp::ok() && !g_stop_signal.load()) {     
         cv::Mat frame;
         {
             std::unique_lock<std::mutex> lock(mtx);
@@ -133,16 +188,16 @@ void YoloThread(YoloDetection* yolo, ORB_SLAM3::ViewerAR* viewer)
                 viewer->SetDetections(convertedDetections);
             }
         }
-
-        std::cout << "YOLO thread finished\n" << std::endl;
     }
+
+    std::cout << "YOLO thread finished\n" << std::endl;
 }
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
-    if (argc != 3) {
+    if (argc < 3) {
         std::cerr << "\nUsage: ros2 run yolo_orb3_ros2 mono_ar path_to_vocabulary path_to_settings\n";
         return 1;
     }
