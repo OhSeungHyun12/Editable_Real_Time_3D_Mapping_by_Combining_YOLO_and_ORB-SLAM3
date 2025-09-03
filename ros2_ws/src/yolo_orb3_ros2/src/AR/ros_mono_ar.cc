@@ -109,14 +109,13 @@ private:
 
         // 4) Latest Pose -> member variable
         if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {       
-
-            std::lock_guard<std::mutex> lock(mPoseMutex);
-            mLastPose = Tcw.inverse();
-        }
-
-        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {
             // Calculate camera pose (Twc) relative to world coordinates
             Sophus::SE3f Twc = Tcw.inverse();
+            
+            {
+                std::lock_guard<std::mutex> lock(mPoseMutex);
+                mLastPose = Twc;
+            }
 
             // Translation and Quaternion Extraction
             Eigen::Vector3f twc = Twc.translation();
