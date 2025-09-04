@@ -123,16 +123,13 @@ jazzy_yolo_orb3() {
     echo "ROS_DOMAIN_ID=13"
 
     # ros2_ws workspace overlay
-    local ws_setup="$HOME/ros2_ws/install/setup.bash"
+    local ws_setup="$HOME/Editable_YOLO_ORB3/yolo_orb3_rviz2/install/setup.bash"
     if [ -f "$ws_setup" ]; then
         source "$ws_setup"
     fi
 
     # Set ORB-SLAM3 lib dir
-    export ORB_SLAM3_ROOT="$HOME/YOLO_ORB_SLAM3/ORB_SLAM3"
-
-    # ADD ORB-SLAM3 and LibTorch lib dir
-    export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/lib:$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:$LD_LIBRARY_PATH"
+    export ORB_SLAM3_ROOT="$HOME/Editable_YOLO_ORB3/ORB_SLAM3"
 
     echo "Jazzy + workspace overlay + ORB_SLAM3 env ready ✅"
     echo "ORB_SLAM3_ROOT=$ORB_SLAM3_ROOT"
