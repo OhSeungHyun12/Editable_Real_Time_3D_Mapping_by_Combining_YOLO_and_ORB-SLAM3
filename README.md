@@ -5,6 +5,9 @@
 
 this project uses YOLOv11 for object detection and integrates the detected object into a 3D map built with ORB-SLAM3. The goal is to generate a high-precision 3D map that accurately represents the position, shape, and surrounding structure of the detected objects.
 
+<img width="1377" height="771" alt="image" src="https://github.com/user-attachments/assets/0ca9e2bc-ba48-4d3f-93c7-52494b500973" />
+
+
 ## Keyword
 +  **Object Detection**
 
@@ -16,6 +19,8 @@ this project uses YOLOv11 for object detection and integrates the detected objec
   
     Generate high-precision 3D maps that visually represent detected objects and the surrounding terrain based on object recognition.
 ---
+
+## License
 
 ## Getting Started
 
@@ -60,7 +65,8 @@ sudo dpkg -i /tmp/ros2-apt-source.deb
 # Install ROS 2 and dev tools
 ```
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools
+sudo apt install -y ros-jazzy-desktop python3-colcon-common-extensions python3-rosdep python3-vcstool ros-dev-tools \
+                    ros-jazzy-topic-tools ros-jazzy-tf2-ros ros-jazzy-tf2-geometry-msgs ros-jazzy-v4l2-camera
 ```
 
 > **Make Virtual Environment**
@@ -75,27 +81,62 @@ code ~/.bashrc
 ```
 You can add to this code or change it if you want.
 ```
+# ---------------------------
+# Aliases list
+# ---------------------------
+echo "To see aliases list type: my_aliases"
+my_aliases() {
+    echo -e "💡 List of available aliases."
+    echo "------------------------------------"
+    echo "▸ ros:"
+    echo "  - jazzy             : Activate ROS2 Jazzy ."
+    echo "  - jazzy_yolo_orb3   : Set Jazzy workspacem, ORB_SLAM3 package path."
+    echo "▸ venvs               : Virtual Environment List."
+    echo "------------------------------------"
+}
 
 # ---------------------------
 # ROS 2 Jazzy Aliases
 # ---------------------------
-echo -e "alias list:\n\r jazzy"
 alias ros_domain="export ROS_DOMAIN_ID=13; echo \"ROS_DOMAIN_ID=13\""
 alias jazzy="source /opt/ros/jazzy/setup.bash; ros_domain; echo \"ROS2 jazzy is activated!\""
 
 # ---------------------------
 # Virtual Environment
 # ---------------------------
-echo "To see venv list type: venvs"
-alias venvs='ls ~/venvs'
-alias ORB_SLAM3_venv='source ~/venvs/ORB_SLAM3_venv/bin/activate'
+#
+alias venvs="ls ~/venvs"
+alias ORB_SLAM3_venv="source ~/venvs/ORB_SLAM3_venv/bin/activate"
+alias yolo11="source ~/venvs/yolo11/bin/activate"
 
 # ---------------------------
 # ROS Package Path
 # ---------------------------
-export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/home/ruherpan/YOLO_ORB_SLAM3/ORB_SLAM3/cam/ROS
+# 
+# ---------------------------
+# ROS Package Path + ORB-SLAM3 env
+# ---------------------------
+jazzy_yolo_orb3() {
+    # ROS2 Jazzy sourcing
+    source /opt/ros/jazzy/setup.bash
+    export ROS_DOMAIN_ID=13
+    echo "ROS_DOMAIN_ID=13"
 
+    # ros2_ws workspace overlay
+    local ws_setup="$HOME/ros2_ws/install/setup.bash"
+    if [ -f "$ws_setup" ]; then
+        source "$ws_setup"
+    fi
 
+    # Set ORB-SLAM3 lib dir
+    export ORB_SLAM3_ROOT="$HOME/YOLO_ORB_SLAM3/ORB_SLAM3"
+
+    # ADD ORB-SLAM3 and LibTorch lib dir
+    export LD_LIBRARY_PATH="$ORB_SLAM3_ROOT/lib:$ORB_SLAM3_ROOT/Thirdparty/libtorch/lib:$LD_LIBRARY_PATH"
+
+    echo "Jazzy + workspace overlay + ORB_SLAM3 env ready ✅"
+    echo "ORB_SLAM3_ROOT=$ORB_SLAM3_ROOT"
+}
 ```
 
 > **Test**
@@ -124,7 +165,7 @@ pkg-config --modversion eigen3
 ```
 sudo apt install libepoxy-dev -y
 pip install --upgrade wheel setuptools pyyaml
-
+cd ~
 mkdir YOLO_ORB_SLAM3 && cd YOLO_ORB_SLAM3
 git clone https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin && mkdir build && cd build
@@ -180,24 +221,52 @@ realsense-viewer
 
 Install CUDA 11.8 LibTorch and put it in ORB_SLAM3/Thirdparty.
 ```
+cd ~/YOLO_ORB_SLAM3/ORB_SLAM3/Thirdparty
 wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu118.zip
+unzip libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
+rm libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
 ```
 
 ### 3. Build
 
 #### Build ORB-SLAM3
-
-> **Build**
-
 ```
 cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
 
-> **Running ORB-SLAM3**
+#### Build ROS2
+```
+cd ~/ros2_ws
+rm -rf build/ install/ log/
+colcon build --packages-select yolo_orb3_ros2
+source install/setup.bash
+```
+
+### 4. Running ORB-SLAM3 
+
+> **Run ROS2**
+
+need two terminal
+```
+ros2 run v4l2_camera v4l2_camera_node
+```
+
+> **Intel RealSense Camera D455**
 ```
 ./cam/mono_realsense_D455 Vocabulary/ORBvoc.txt ./cam/mono_RealSense_D455.yaml
 ```
 
+> **logi**
+```
+ros2 run yolo_orb3_ros2 mono_ar ~/YOLO_ORB_SLAM3/ORB_SLAM3/Vocabulary/ORBvoc.txt ~/YOLO_ORB_SLAM3/ORB_SLAM3/Examples/ROS2/webcam.yaml
+```
+### 5. Running YOLO + ORB-SLAM3
 
+> **run Rviz2**
+>
+```
+jazzy_yolo_orb3
+ros2 launch yolo_orb3_ros2 yolo_orb3_rviz2.launch.py
+```

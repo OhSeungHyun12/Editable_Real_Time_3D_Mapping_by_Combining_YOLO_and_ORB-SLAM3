@@ -1,0 +1,44 @@
+%YAML:1.0
+
+# Camera Parameters
+Camera.type: "PinHole"
+Camera.fx: 525.0
+Camera.fy: 525.0
+Camera.cx: 319.5
+Camera.cy: 239.5
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+
+Camera.width: 640
+Camera.height: 480
+
+# Frames per second
+Camera.fps: 30.0
+
+# RGB: 1 for RGB (OpenCV will convert from BGR)
+Camera.RGB: 1
+
+# Camera image scale (1.0 means no scaling)
+Camera.imageScale: 1.0
+
+# ORB Extractor Parameters
+ORBextractor.nFeatures: 1000
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+# Viewer Parameters
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500
