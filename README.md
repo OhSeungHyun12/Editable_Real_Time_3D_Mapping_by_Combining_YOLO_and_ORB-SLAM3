@@ -228,16 +228,17 @@ rm libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
 
 #### Build ORB-SLAM3
 ```
-cd ~/YOLO_ORB_SLAM3/ORB_SLAM3
+cd ~/Editable_YOLO_ORB3/ORB_SLAM3
 chmod +x build.sh
 ./build.sh 2>&1 | tee build.log
 ```
 
 #### Build ROS2
 ```
-cd ~/ros2_ws
-rm -rf build/ install/ log/
-colcon build --packages-select yolo_orb3_ros2
+cd ~/Editable_YOLO_ORB3/yolo_orb3_rviz2
+rm -rf build install log
+jazzy_yolo_orb3
+colcon build
 source install/setup.bash
 ```
 
@@ -265,5 +266,5 @@ ros2 run yolo_orb3_ros2 mono_ar ~/YOLO_ORB_SLAM3/ORB_SLAM3/Vocabulary/ORBvoc.txt
 >
 ```
 jazzy_yolo_orb3
-ros2 launch yolo_orb3_ros2 yolo_orb3_rviz2.launch.py
+ros2 launch yolo_orb3_rviz2 yolo_orb3_rviz2.launch.py
 ```
