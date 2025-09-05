@@ -10,49 +10,62 @@ double sharedTimestamp;
 bool newFrameAvailable = false;
 std::atomic<bool> g_stop_signal(false);                 // Global termination signal flag
 
-void YoloThread(YoloDetection* yolo, rclcpp::Node::SharedPtr node, rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr pub)
+void YoloThread(YoloDetection* yolo,
+                rclcpp::Node::SharedPtr node,
+                rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr pub,
+                rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr overlay_pub)
 {
-    auto clock = node->get_clock();
     while (rclcpp::ok() && !g_stop_signal.load()) {
         cv::Mat frame;
         double timestamp;
         {
             std::unique_lock<std::mutex> lock(mtx);
             cv_frame_ready.wait(lock, [] { return newFrameAvailable || g_stop_signal.load(); });
-
             if (g_stop_signal.load()) break;
 
             frame = sharedFrame.clone();
             timestamp = sharedTimestamp;
             newFrameAvailable = false;
         }
-
-        if (!frame.empty()) {
-            yolo->GetImage(frame);
-            if (!yolo->mRGB.empty() && yolo->Detect()) {
-                vision_msgs::msg::Detection2DArray detections_msg;
-                detections_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(timestamp * 1e9));
-                detections_msg.header.frame_id = "camera"; // Camera coordinate system name
-
-                for (const auto& det : yolo->mvDetections) {
-                    vision_msgs::msg::Detection2D detection;
-                    detection.header = detections_msg.header;
+        
+        if (frame.empty()) continue;
+        
+        yolo->GetImage(frame);
+        if (!yolo->mRGB.empty() && yolo->Detect()) {
+            vision_msgs::msg::Detection2DArray detections_msg;
+            detections_msg.header.stamp = node->now();
+            detections_msg.header.frame_id = "camera";                  // Camera coordinate system name
+            
+            for (const auto& det : yolo->mvDetections) {
+                vision_msgs::msg::Detection2D det_msg;                  
+                det_msg.header = detections_msg.header;
                     
-                    // Set the center and size of the bounding box
-                    detection.bbox.center.position.x = det.box.x + det.box.width / 2.0;
-                    detection.bbox.center.position.y = det.box.y + det.box.height / 2.0;
-                    detection.bbox.size_x = det.box.width;
-                    detection.bbox.size_y = det.box.height;
+                // Set the center and size of the bounding box
+                det_msg.bbox.center.position.x = det.box.x + det.box.width * 0.5;
+                det_msg.bbox.center.position.y = det.box.y + det.box.height * 0.5;
+                det_msg.bbox.size_x = det.box.width;
+                det_msg.bbox.size_y = det.box.height;
 
-                    // Detection results (class name, confidence)
-                    vision_msgs::msg::ObjectHypothesisWithPose hypothesis;
-                    hypothesis.hypothesis.class_id = det.label;
-                    hypothesis.hypothesis.score = det.confidence;
-                    detection.results.push_back(hypothesis);
-
-                    detections_msg.detections.push_back(detection);
+                // Detection results (class name, confidence)
+                vision_msgs::msg::ObjectHypothesisWithPose hyp;         // hyp = hypothesis
+                hyp.hypothesis.class_id = det.label;
+                hyp.hypothesis.score    = det.confidence;
+                det_msg.results.push_back(hyp);
+                
+                detections_msg.detections.push_back(det_msg);
+            }
+            pub->publish(detections_msg);
+            
+            if (overlay_pub) {
+                cv::Mat viz = frame.clone();
+                for (const auto& d : yolo->mvDetections) {
+                    cv::rectangle(viz, d.box, cv::Scalar(0,255,0), 2);
+                    std::string text = d.label + " " + cv::format("%.2f", d.confidence);
+                    cv::putText(viz, text, d.box.tl() + cv::Point(0,-5),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,255,0), 1);
                 }
-                pub->publish(detections_msg);
+                auto img_msg = cv_bridge::CvImage(detections_msg.header, "bgr8", viz).toImageMsg();
+                overlay_pub->publish(*img_msg);
             }
         }
     }
@@ -207,9 +220,10 @@ int main(int argc, char **argv)
 
     // Create YOLO Publisher on the main node
     auto yolo_pub = slam_node->create_publisher<vision_msgs::msg::Detection2DArray>("/yolo_detections", 10);
+    auto overlay_pub = slam_node->create_publisher<sensor_msgs::msg::Image>("/yolo/image_overlay", 10);
 
     // Start YoloThread
-    std::thread yolo_thread(YoloThread, &yolo, slam_node, yolo_pub);
+    std::thread yolo_thread(YoloThread, &yolo, slam_node, yolo_pub, overlay_pub);
 
     rclcpp::spin(slam_node);
 
