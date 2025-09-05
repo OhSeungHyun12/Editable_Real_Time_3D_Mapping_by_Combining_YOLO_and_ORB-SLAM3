@@ -9,6 +9,8 @@ cv::Mat sharedFrame;
 double sharedTimestamp;
 bool newFrameAvailable = false;
 std::atomic<bool> g_stop_signal(false);                 // Global termination signal flag
+std::atomic<int>  g_slam_state(0);                      // ORB-SLAM3 Tracking state (1/2/3)
+std::atomic<bool> g_have_map_points(false);             // If a map point exists -> true
 
 void YoloThread(YoloDetection* yolo,
                 rclcpp::Node::SharedPtr node,
@@ -28,42 +30,65 @@ void YoloThread(YoloDetection* yolo,
             newFrameAvailable = false;
         }
         
-        if (frame.empty()) continue;
-        
-        yolo->GetImage(frame);
-        if (!yolo->mRGB.empty() && yolo->Detect()) {
-            vision_msgs::msg::Detection2DArray detections_msg;
-            detections_msg.header.stamp = node->now();
-            detections_msg.header.frame_id = "camera";                  // Camera coordinate system name
-            
-            for (const auto& det : yolo->mvDetections) {
-                vision_msgs::msg::Detection2D det_msg;                  
-                det_msg.header = detections_msg.header;
-                    
-                // Set the center and size of the bounding box
-                det_msg.bbox.center.position.x = det.box.x + det.box.width * 0.5;
-                det_msg.bbox.center.position.y = det.box.y + det.box.height * 0.5;
-                det_msg.bbox.size_x = det.box.width;
-                det_msg.bbox.size_y = det.box.height;
+        if (!frame.empty()) {
+            yolo->GetImage(frame);
+            bool has_det = (!yolo->mRGB.empty() && yolo->Detect());
 
-                // Detection results (class name, confidence)
-                vision_msgs::msg::ObjectHypothesisWithPose hyp;         // hyp = hypothesis
-                hyp.hypothesis.class_id = det.label;
-                hyp.hypothesis.score    = det.confidence;
-                det_msg.results.push_back(hyp);
+            vision_msgs::msg::Detection2DArray detections_msg;
+            detections_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(timestamp * 1e9));
+            detections_msg.header.frame_id = "camera";                  // Camera coordinate system name
+        
+            if (has_det) {
+                for (const auto& det : yolo->mvDetections) {
+                    vision_msgs::msg::Detection2D det_msg;                  
+                    det_msg.header = detections_msg.header;
+                    
+                    // Set the center and size of the bounding box
+                    det_msg.bbox.center.position.x = det.box.x + det.box.width * 0.5;
+                    det_msg.bbox.center.position.y = det.box.y + det.box.height * 0.5;
+                    det_msg.bbox.size_x = det.box.width;
+                    det_msg.bbox.size_y = det.box.height;
+
+                    // Detection results (class name, confidence)
+                    vision_msgs::msg::ObjectHypothesisWithPose hyp;         // hyp = hypothesis
+                    hyp.hypothesis.class_id = det.label;
+                    hyp.hypothesis.score    = det.confidence;
+                    det_msg.results.push_back(hyp);
                 
-                detections_msg.detections.push_back(det_msg);
+                    detections_msg.detections.push_back(det_msg);
+                }                
             }
+
             pub->publish(detections_msg);
             
             if (overlay_pub) {
                 cv::Mat viz = frame.clone();
-                for (const auto& d : yolo->mvDetections) {
-                    cv::rectangle(viz, d.box, cv::Scalar(0,255,0), 2);
-                    std::string text = d.label + " " + cv::format("%.2f", d.confidence);
-                    cv::putText(viz, text, d.box.tl() + cv::Point(0,-5),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,255,0), 1);
+                
+                if (has_det) {
+                    for (const auto& d : yolo->mvDetections) {
+                        cv::rectangle(viz, d.box, cv::Scalar(0,255,0), 2);
+                        std::string text = d.label + " " + cv::format("%.2f", d.confidence);
+                        cv::putText(viz, text, d.box.tl() + cv::Point(0,-5),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,255,0), 1);
+                    }
                 }
+                
+                int st = g_slam_state.load(std::memory_order_relaxed);
+                bool ok = (st == 2) && g_have_map_points.load(std::memory_order_relaxed);
+                std::string s;
+                cv::Scalar col;
+                
+                if (st == 3) {
+                    s = "SLAM LOST"; col = cv::Scalar(0,0,255);
+                } else if (ok) {
+                    s = "SLAM ON";   col = cv::Scalar(0,255,0);
+                } else {
+                    s = "SLAM OFF";  col = cv::Scalar(0,0,255);
+                }
+                
+                cv::putText(viz, s, cv::Point(12, 28),
+                cv::FONT_HERSHEY_SIMPLEX, 0.9, col, 2);
+
                 auto img_msg = cv_bridge::CvImage(detections_msg.header, "bgr8", viz).toImageMsg();
                 overlay_pub->publish(*img_msg);
             }
@@ -83,9 +108,11 @@ public:
 
         mPosePub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/camera_pose", 10);
         mPointCloudPub = this->create_publisher<sensor_msgs::msg::PointCloud2>("/map_points", 10);
+
+        tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
         
         mTimer = this->create_wall_timer(
-            std::chrono::milliseconds(500),
+            std::chrono::milliseconds(100),
             std::bind(&SlamNode::PublishMapAndPose, this));
 
         mTrajectoryFile << "# Camera Trajectory" << endl;
@@ -98,14 +125,15 @@ private:
     {
         geometry_msgs::msg::PoseStamped poseMsg;
         poseMsg.header.stamp = this->get_clock()->now();
-        poseMsg.header.frame_id = "map";                // Reference of coordinate system "___"
+        poseMsg.header.frame_id = "map";                // Reference of coordinate system "map->(you can change)"
 
         {
-            // Protecting mLastPose Access with a Mutex
+            // Pose Publish & TF
             std::lock_guard<std::mutex> lock(mPoseMutex);
             if (!mLastPose.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {
                 Eigen::Vector3f p = mLastPose.translation();
                 Eigen::Quaternionf q = mLastPose.unit_quaternion();
+
                 poseMsg.pose.position.x = p.x();
                 poseMsg.pose.position.y = p.y();
                 poseMsg.pose.position.z = p.z();
@@ -114,35 +142,52 @@ private:
                 poseMsg.pose.orientation.z = q.z();
                 poseMsg.pose.orientation.w = q.w();
                 mPosePub->publish(poseMsg);
+
+                if (tf_broadcaster_) {
+                    geometry_msgs::msg::TransformStamped tf_msg;
+                    tf_msg.header = poseMsg.header;
+                    tf_msg.child_frame_id = "camera";     
+                    tf_msg.transform.translation.x = p.x();
+                    tf_msg.transform.translation.y = p.y();
+                    tf_msg.transform.translation.z = p.z();
+                    tf_msg.transform.rotation.x = q.x();
+                    tf_msg.transform.rotation.y = q.y();
+                    tf_msg.transform.rotation.z = q.z();
+                    tf_msg.transform.rotation.w = q.w();
+                    tf_broadcaster_->sendTransform(tf_msg);
+                }
             }
         }
 
-        std::vector<ORB_SLAM3::MapPoint*> vMPs = mpSLAM->GetAllMapPoints();
-        if(vMPs.empty()) return;
+        const auto& all = mpSLAM->GetAllMapPoints();
+        
+        std::vector<Eigen::Vector3f> pts;
+        pts.reserve(all.size());
+        for (auto* pMP : all) {
+            if (pMP && !pMP->isBad()) pts.push_back(pMP->GetWorldPos());
+        }
+
+        g_have_map_points.store(!pts.empty(), std::memory_order_relaxed);
+        if (pts.empty()) return;
 
         sensor_msgs::msg::PointCloud2 cloudMsg;
         cloudMsg.header.stamp = this->get_clock()->now();
         cloudMsg.header.frame_id = "map";
         cloudMsg.height = 1; 
-        cloudMsg.width = vMPs.size();
+        cloudMsg.width = pts.size();
         cloudMsg.is_dense = true;
 
         sensor_msgs::PointCloud2Modifier modifier(cloudMsg);
         modifier.setPointCloud2FieldsByString(1, "xyz");
-        modifier.resize(vMPs.size());
+        modifier.resize(pts.size());
 
-        sensor_msgs::PointCloud2Iterator<float> iter_x(cloudMsg, "x");
-        sensor_msgs::PointCloud2Iterator<float> iter_y(cloudMsg, "y");
-        sensor_msgs::PointCloud2Iterator<float> iter_z(cloudMsg, "z");
+        sensor_msgs::PointCloud2Iterator<float> ix_map(cloudMsg, "x");      // PointCloud2 iterators to write XYZ in the 'map' frame.
+        sensor_msgs::PointCloud2Iterator<float> iy_map(cloudMsg, "y");      // RViz uses TF (map → camera, etc.) only for display.
+        sensor_msgs::PointCloud2Iterator<float> iz_map(cloudMsg, "z");
 
-        for (ORB_SLAM3::MapPoint* pMP : vMPs) {
-            if (pMP && !pMP->isBad()) {
-                Eigen::Vector3f pos = pMP->GetWorldPos();
-                *iter_x = pos.x();
-                *iter_y = pos.y();
-                *iter_z = pos.z();
-                ++iter_x; ++iter_y; ++iter_z;
-            }
+        for (const auto& P : pts) {
+            *ix_map = P.x(); *iy_map = P.y(); *iz_map = P.z();
+            ++ix_map; ++iy_map; ++iz_map;
         }
         mPointCloudPub->publish(cloudMsg);
     }
@@ -154,6 +199,8 @@ private:
         double tframe = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
 
         Sophus::SE3f Tcw = mpSLAM->TrackMonocular(frame, tframe);
+        g_slam_state.store(mpSLAM->GetTrackingState(), std::memory_order_relaxed);
+
 
         //===== Start camera trajectory saving logic =====//
         // 4) Latest Pose -> member variable
@@ -193,6 +240,7 @@ private:
     rclcpp::TimerBase::SharedPtr mTimer;
     Sophus::SE3f mLastPose;
     std::mutex mPoseMutex;
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 
 int main(int argc, char **argv)
