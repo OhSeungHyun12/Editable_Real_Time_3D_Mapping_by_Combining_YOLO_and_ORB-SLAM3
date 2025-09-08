@@ -36,7 +36,7 @@ void YoloThread(YoloDetection* yolo,
 
             vision_msgs::msg::Detection2DArray detec_msg;
             detec_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(timestamp * 1e9));
-            detec_msg.header.frame_id = "camera";                  // Camera coordinate system name
+            detec_msg.header.frame_id = "camera";                           // Camera coordinate system name
         
             if (has_det) {
                 for (const auto& det : yolo->mvDetections) {
