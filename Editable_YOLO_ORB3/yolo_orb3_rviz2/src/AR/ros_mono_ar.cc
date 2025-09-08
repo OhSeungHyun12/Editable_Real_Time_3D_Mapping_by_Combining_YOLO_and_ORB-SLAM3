@@ -8,22 +8,22 @@ std::condition_variable cv_frame_ready;
 cv::Mat sharedFrame;
 double sharedTimestamp;
 bool newFrameAvailable = false;
-std::atomic<bool> stop_sig(false);                  // Global termination signal flag
-std::atomic<int>  slam_state(0);                    // ORB-SLAM3 Tracking state (1/2/3)
-std::atomic<bool> map_points(false);                // If a map point exists -> true
+std::atomic<bool> gl_stop_sig(false);                  // Global termination signal flag
+std::atomic<int>  gl_slam_state(0);                    // ORB-SLAM3 Tracking state (1/2/3)
+std::atomic<bool> gl_map_points(false);                // If a map point exists -> true
 
 void YoloThread(YoloDetection* yolo,
                 rclcpp::Node::SharedPtr node,
                 rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr pub,
                 rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr overlay_pub)
 {
-    while (rclcpp::ok() && !stop_sig.load()) {
+    while (rclcpp::ok() && !gl_stop_sig.load()) {
         cv::Mat frame;
         double timestamp;
         {
             std::unique_lock<std::mutex> lock(mtx);
-            cv_frame_ready.wait(lock, [] { return newFrameAvailable || stop_sig.load(); });
-            if (stop_sig.load()) break;
+            cv_frame_ready.wait(lock, [] { return newFrameAvailable || gl_stop_sig.load(); });
+            if (gl_stop_sig.load()) break;
 
             frame = sharedFrame.clone();
             timestamp = sharedTimestamp;
@@ -73,8 +73,8 @@ void YoloThread(YoloDetection* yolo,
                     }
                 }
                 
-                int st = slam_state.load(std::memory_order_relaxed);
-                bool ok = (st == 2) && map_points.load(std::memory_order_relaxed);
+                int st = gl_slam_state.load(std::memory_order_relaxed);
+                bool ok = (st == 2) && gl_map_points.load(std::memory_order_relaxed);
                 std::string s;
                 cv::Scalar col;
                 
@@ -167,7 +167,7 @@ private:
             if (pMP && !pMP->isBad()) pts.push_back(pMP->GetWorldPos());
         }
 
-        map_points.store(!pts.empty(), std::memory_order_relaxed);
+        gl_map_points.store(!pts.empty(), std::memory_order_relaxed);
         if (pts.empty()) return;
 
         sensor_msgs::msg::PointCloud2 cloudMsg;
@@ -199,7 +199,7 @@ private:
         double tframe = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
 
         Sophus::SE3f Tcw = mpSLAM->TrackMonocular(frame, tframe);
-        slam_state.store(mpSLAM->GetTrackingState(), std::memory_order_relaxed);
+        gl_slam_state.store(mpSLAM->GetTrackingState(), std::memory_order_relaxed);
 
 
         //===== Start camera trajectory saving logic =====//
@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 
     rclcpp::spin(slam_node);
 
-    stop_sig.store(true);
+    gl_stop_sig.store(true);
     cv_frame_ready.notify_all();
     yolo_thread.join();
 
