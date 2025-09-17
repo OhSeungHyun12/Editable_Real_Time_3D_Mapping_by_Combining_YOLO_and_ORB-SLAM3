@@ -35,6 +35,20 @@ YoloDetection::YoloDetection()
         mClassnames.push_back(name);
     }
 
+    // Reset color palette
+    if (!mClassnames.empty()) {
+        mColorPalette.reserve(mClassnames.size());
+        for (size_t i = 0; i < mClassnames.size(); ++i) {
+            size_t h = std::hash<std::string>{}(mClassnames[i]) % 360;
+            float H=h, S=0.8f, V=0.9f, C=V*S, X=C*(1-std::fabs(std::fmod(H/60.f,2.f)-1)), m=V-C;
+            float r=0,g=0,b=0;
+            if(H<60){r=C;g=X;} else if(H<120){r=X;g=C;}
+            else if(H<180){g=C;b=X;} else if(H<240){g=X;b=C;}
+            else if(H<300){r=X;b=C;} else {r=C;b=X;}
+            mColorPalette.push_back(rgb2uint32(int((r+m)*255), int((g+m)*255), int((b+m)*255)));
+        }
+    }
+
     // Dynamic object class
     mvDynamicNames = {"person", "car", "motorbike", "bus", "train", "truck", "boat", "bird", "cat",
                       "dog", "horse", "sheep", "cow", "bear"};
@@ -64,10 +78,10 @@ bool YoloDetection::Detect()
     // 1) YOLO input image preprocessing (letterboxing)
     const int IN = 640;
     float gain = std::min(IN / (float)mRGB.cols, IN / (float)mRGB.rows);
-    int   new_w = (int)std::round(mRGB.cols * gain);
-    int   new_h = (int)std::round(mRGB.rows * gain);
-    int   pad_left = (IN - new_w) / 2;
-    int   pad_top  = (IN - new_h) / 2;
+    int new_w = (int)std::round(mRGB.cols * gain);
+    int new_h = (int)std::round(mRGB.rows * gain);
+    int pad_left = (IN - new_w) / 2;
+    int pad_top = (IN - new_h) / 2;
 
     cv::Mat img(IN, IN, CV_8UC3, cv::Scalar(114,114,114));
     if (new_w > 0 && new_h > 0) {
@@ -76,8 +90,6 @@ bool YoloDetection::Detect()
         resized.copyTo(img(cv::Rect(pad_left, pad_top, new_w, new_h)));
     }
     cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
-    
-
     torch::Tensor imgTensor = torch::from_blob(img.data, {1, img.rows, img.cols, 3}, torch::kByte);
     imgTensor = imgTensor.permute({0, 3, 1, 2}).toType(torch::kFloat) / 255.0;
     imgTensor = imgTensor.to(device);
@@ -102,18 +114,18 @@ bool YoloDetection::Detect()
     if (!dets.empty()) {
         for (int i = 0; i < dets[0].sizes()[0]; ++i) {
             // Inverse compensation (using the same integer pad/real gain as preprocessing)
-            float left   = (dets[0][i][0].item<float>() - pad_left) / gain;
-            float top    = (dets[0][i][1].item<float>() - pad_top ) / gain;
-            float right  = (dets[0][i][2].item<float>() - pad_left) / gain;
+            float left = (dets[0][i][0].item<float>() - pad_left) / gain;
+            float top = (dets[0][i][1].item<float>() - pad_top ) / gain;
+            float right = (dets[0][i][2].item<float>() - pad_left) / gain;
             float bottom = (dets[0][i][3].item<float>() - pad_top ) / gain;
 
             // Extract confidence/classID
             float confidence = dets[0][i][4].item<float>();
-            int   classID    = dets[0][i][5].item<int>();
+            int classID = dets[0][i][5].item<int>();
             
-            int x = std::clamp((int)std::round(left),  0, mRGB.cols - 1);
-            int y = std::clamp((int)std::round(top),   0, mRGB.rows - 1);
-            int w = std::clamp((int)std::round(right  - left), 1, mRGB.cols - x);
+            int x = std::clamp((int)std::round(left), 0, mRGB.cols - 1);
+            int y = std::clamp((int)std::round(top), 0, mRGB.rows - 1);
+            int w = std::clamp((int)std::round(right - left), 1, mRGB.cols - x);
             int h = std::clamp((int)std::round(bottom - top ), 1, mRGB.rows - y);
             cv::Rect2i rect(x, y, w, h);
 
@@ -126,17 +138,29 @@ bool YoloDetection::Detect()
                 dr.box = rect;
                 dr.label = mClassnames[classID];
                 dr.confidence = confidence;
+                dr.class_id = classID;
                 mvDetections.push_back(dr);
             }
         }
-
-        std::cout << "[YOLO] Detection success: " << dets[0].sizes()[0]
-                  << " objects detected | mvDetections=" << mvDetections.size() << std::endl;
-    } else {
-        std::cout << "[YOLO] No objects detected." << std::endl;
     }
-
     return !mvDetections.empty();
+}
+
+uint32_t YoloDetection::GetColorForClass(int class_id)
+{
+    if (class_id >= 0 && class_id < static_cast<int>(mColorPalette.size())) {
+        return mColorPalette[class_id];
+    }
+    return rgb2uint32(128, 128, 128);
+}
+
+void YoloDetection::GetImage(const cv::Mat& im)
+{
+    if (im.empty()) {
+        std::cerr << "[YOLO] GetImage received empty frame!" << std::endl;
+        return;
+    }
+    mRGB = im.clone();
 }
 
 std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor preds, float score_thresh, float iou_thresh)
@@ -157,38 +181,26 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
         std::tie(max_conf, max_cls) = torch::max(class_conf, 1);
         scores = max_conf;
     }
-
-    std::cout << "[YOLO] Candidates before threshold: " << scores.size(0) << std::endl;
-    std::cout << "[YOLO] Max score: " << scores.max().item<float>() << std::endl;
-
-
     torch::Tensor mask = scores > score_thresh;
     if (mask.sum().item<int>() == 0) {
-        std::cout << "[YOLO] No detections above threshold." << std::endl;
         return output;
     }
-
     auto selected_idx = torch::nonzero(mask).squeeze();
     pred = pred.index_select(0, selected_idx);
     max_cls = max_cls.index_select(0, selected_idx);
     scores  = scores.index_select(0, selected_idx);
 
-    std::cout << "[YOLO] After score threshold: " << pred.sizes()[0] << " candidates" << std::endl;
-
     if (pred.sizes()[0] == 0) return output;
-
     pred.select(1, 0) = pred.select(1, 0) - pred.select(1, 2) / 2;
     pred.select(1, 1) = pred.select(1, 1) - pred.select(1, 3) / 2;
     pred.select(1, 2) = pred.select(1, 0) + pred.select(1, 2);
     pred.select(1, 3) = pred.select(1, 1) + pred.select(1, 3);
 
     pred = torch::cat({pred.slice(1, 0, 4), scores.unsqueeze(1), max_cls.unsqueeze(1)}, 1);
-
-    torch::Tensor areas = (pred.select(1, 2) - pred.select(1, 0)) *
-                          (pred.select(1, 3) - pred.select(1, 1));
+    torch::Tensor areas = (pred.select(1, 2) - pred.select(1, 0)) * (pred.select(1, 3) - pred.select(1, 1));
 
     auto [_, idxs] = torch::sort(pred.select(1, 4), 0, true);
-
+    
     std::vector<int64_t> keep;
     while (idxs.size(0) > 0) {
         int64_t i = idxs[0].item<int64_t>();
@@ -213,25 +225,6 @@ std::vector<torch::Tensor> YoloDetection::non_max_suppression(torch::Tensor pred
 
     torch::Tensor keep_tensor = torch::from_blob(keep.data(), {(long)keep.size()}, torch::kLong).clone();
     output.push_back(pred.index_select(0, keep_tensor));
-    std::cout << "[YOLO] After NMS: " << output[0].sizes()[0] << " final boxes" << std::endl;
     return output;
 }
 
-void YoloDetection::GetImage(cv::Mat &im)
-{
-    if (im.empty()) {
-        std::cerr << "[YOLO] GetImage received empty frame!" << std::endl;
-        return;
-    }
-    mRGB = im.clone();
-}
-
-void YoloDetection::ClearImage()
-{
-    mRGB.release();
-}
-
-void YoloDetection::ClearArea()
-{
-    mvPersonArea.clear();
-}
