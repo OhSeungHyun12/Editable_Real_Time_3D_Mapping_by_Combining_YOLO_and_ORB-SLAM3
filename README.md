@@ -255,7 +255,7 @@ ros2 run v4l2_camera v4l2_camera_node
 ./cam/mono_realsense_D455 Vocabulary/ORBvoc.txt ./cam/mono_RealSense_D455.yaml
 ```
 
-> **logi**
+> **Logitech HD webcam C270**
 ```
 ros2 run yolo_orb3_ros2 mono_ar ~/YOLO_ORB_SLAM3/ORB_SLAM3/Vocabulary/ORBvoc.txt ~/YOLO_ORB_SLAM3/ORB_SLAM3/Examples/ROS2/webcam.yaml
 ```
