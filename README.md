@@ -25,6 +25,8 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 > **YOLOv11:** https://github.com/ultralytics/ultralytics.git
 
 > **YOLO_ORB_SLAM3:** https://github.com/YWL0720/YOLO_ORB_SLAM3.git
+> 
+> **Checkerboard:** https://markhedleyjones.com/projects/calibration-checkerboard-collection
 
 ## Getting Started
 
