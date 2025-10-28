@@ -262,9 +262,18 @@ ros2 run v4l2_camera v4l2_camera_node
 ./cam/mono_realsense_D455 Vocabulary/ORBvoc.txt ./cam/mono_RealSense_D455.yaml
 ```
 
+> **Camera Calibration**
+
 > **Logitech HD webcam C270**
 ```
-ros2 run yolo_orb3_ros2 mono_ar ~/YOLO_ORB_SLAM3/ORB_SLAM3/Vocabulary/ORBvoc.txt ~/YOLO_ORB_SLAM3/ORB_SLAM3/Examples/ROS2/webcam.yaml
+sudo apt install ros-jazzy-camera-calibration
+ros2 run v4l2_camera v4l2_camera_node --ros-args -p image_size:=[640,480]
+
+ros2 run camera_calibration cameracalibrator \
+    --size 8x6 \
+    --square 0.025 \
+    --no-service-check \
+    --ros-args -r image:=/image_raw
 ```
 ### 5. Running YOLO + ORB-SLAM3
 
