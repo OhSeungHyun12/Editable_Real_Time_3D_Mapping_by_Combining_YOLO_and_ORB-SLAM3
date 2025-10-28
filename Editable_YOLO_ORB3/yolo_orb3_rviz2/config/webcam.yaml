@@ -2,15 +2,15 @@
 
 # Camera Parameters
 Camera.type: "PinHole"
-Camera.fx: 525.0
-Camera.fy: 525.0
-Camera.cx: 319.5
-Camera.cy: 239.5
+Camera.fx: 703.668006077169
+Camera.fy: 703.888926454454
+Camera.cx: 327.38010369670764
+Camera.cy: 242.3375518871804
 
-Camera.k1: 0.0
-Camera.k2: 0.0
-Camera.p1: 0.0
-Camera.p2: 0.0
+Camera.k1: 0.07681863184628811
+Camera.k2: -0.042219969494741556
+Camera.p1: 0.0016342819946458282
+Camera.p2: -0.0010806339280500649
 
 Camera.width: 640
 Camera.height: 480
