@@ -111,7 +111,9 @@ class SlamNode : public rclcpp::Node
 {
 public:
     SlamNode(ORB_SLAM3::System* pSLAM, YoloDetection* pYOLO, std::ofstream& trajectory_file)
-    : Node("slam_node"), mpSLAM(pSLAM), mpYOLO(pYOLO), mTrajectoryFile(trajectory_file)
+    : Node("slam_node"), 
+      mpSLAM(pSLAM), mpYOLO(pYOLO), mTrajectoryFile(trajectory_file), 
+      R_map_slam_(Sophus::SO3f::exp(Eigen::Vector3f(-M_PI / 2.0f, 0, 0)))
     {
         image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
             "/image_raw", 10, std::bind(&SlamNode::GrabImage, this, std::placeholders::_1));
@@ -122,48 +124,51 @@ public:
             this->last_dets_ = msg;
         });            
         mPosePub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/camera_pose", 10);
-        mMapPub = this->create_publisher<sensor_msgs::msg::PointCloud2>("/semantic_map", 10);
-        static_cloud_OctoMap = this->create_publisher<sensor_msgs::msg::PointCloud2>("/OctoMap_pointcloud", 10);
+        mYoloOrbMapPub = this->create_publisher<sensor_msgs::msg::PointCloud2>("/yolo_orb_map", 10);
+
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
-        mTimer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&SlamNode::PublishData, this));        
+        mTimer = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&SlamNode::PublishData, this));
+
+        // R_map_slam_ 변수 초기화: X축 기준 -90도 회전
+        float roll_rad = -M_PI / 2.0f;
     }
 
 private:
 
-    // --- SLAM / YOLO ---
+    // SLAM / YOLO
     ORB_SLAM3::System* mpSLAM;
     YoloDetection* mpYOLO;
 
-    // --- ROS IO ---
+    // ROS IO
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     rclcpp::Subscription<vision_msgs::msg::Detection2DArray>::SharedPtr det_sub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr mPosePub;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr mMapPub;                      // semantic_points
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr static_cloud_OctoMap;         // ★ /OctoMap_pointcloud
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr mYoloOrbMapPub;
     rclcpp::TimerBase::SharedPtr mTimer;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
-    // --- Pose / Trajectory ---
+    // Pose / Trajectory
     std::ofstream& mTrajectoryFile;
     Sophus::SE3f mLastPose;
     std::mutex mPoseMutex;
 
-    // --- Semantic label map (MapPoint* -> class_id) ---
+    // Semantic label map (MapPoint* -> class_id)
     std::unordered_map<size_t, int> mp_semantic_label_;
 
-    // --- Detections cache ---
+    // Detections
     vision_msgs::msg::Detection2DArray::SharedPtr last_dets_;
     std::mutex det_mtx_;
 
-    // --- 슬라이딩 윈도우를 위한 deque ---
     size_t overlay_window_size_ = 3;
     std::deque<std::unordered_map<size_t, int>> m_semantic_hist;
+
+    // (X축 기준 -90도 회전)
+    const Sophus::SO3f R_map_slam_;
 
     void PublishData() {
         PublishPoseAndTF();
         LabelMapPoints();
         PublishVisualizationMap();
-        PublishOctomapInput();
     }
     
     void PublishPoseAndTF() {
@@ -171,11 +176,21 @@ private:
         poseMsg.header.stamp = this->get_clock()->now();
         poseMsg.header.frame_id = "map";
 
-        std::lock_guard<std::mutex> lock(mPoseMutex);
-        if (mLastPose.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) return;
+        // SLAM 원본 좌표계 기준 카메라 자세 (Twc)
+        Sophus::SE3f T_slam_cam;
+        {
+            std::lock_guard<std::mutex> lock(mPoseMutex);
+            if (mLastPose.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) return;
+            T_slam_cam = mLastPose;
+        }
+
+        // 고정 회전 적용: T_map_cam = R_map_slam * T_slam_cam
+        Sophus::SE3f R_map_slam_SE3(R_map_slam_, Eigen::Vector3f::Zero());
+        Sophus::SE3f T_map_cam = R_map_slam_SE3 * T_slam_cam;
         
-        Eigen::Vector3f p = mLastPose.translation();
-        Eigen::Quaternionf q = mLastPose.unit_quaternion();
+        // *변환된* 자세에서 위치(p)와 회전(q) 추출
+        Eigen::Vector3f p = T_map_cam.translation();
+        Eigen::Quaternionf q = T_map_cam.unit_quaternion();
 
         poseMsg.pose.position.x = p.x();
         poseMsg.pose.position.y = p.y();
@@ -197,9 +212,10 @@ private:
     }
 
     void LabelMapPoints() {
-        m_semantic_hist.push_back({});                          // 새 프레임을 위한 빈 맵 추가
+        // 새 프레임을 위한 빈 맵 추가
+        m_semantic_hist.push_back({});
         if(m_semantic_hist.size() > overlay_window_size_) {
-            m_semantic_hist.pop_front();                        // 윈도우 크기 유지
+            m_semantic_hist.pop_front();
         }
         auto& current_labels = m_semantic_hist.back();
 
@@ -279,12 +295,17 @@ private:
             if (!pMP || pMP->isBad()) continue;
             
             size_t key = reinterpret_cast<size_t>(pMP);
-            auto it = recent_labels.find(key);        
+            auto it = recent_labels.find(key);
             uint32_t rgb = (it != recent_labels.end()) ? mpYOLO->GetColorForClass(it->second) : white_color;
-            buf.push_back({ pMP->GetWorldPos(), rgb });
+
+            // SLAM 원본 월드 좌표를 가져와서 R_map_slam_ 회전 적용
+            Eigen::Vector3f p_slam = pMP->GetWorldPos();
+            Eigen::Vector3f p_map = R_map_slam_ * p_slam;
+
+            buf.push_back({ p_map, rgb });
         }
         
-        // --- 시각화용 /semantic_points (XYZRGB) ---
+        // 시각화용
         sensor_msgs::msg::PointCloud2 cloud_vis;
         cloud_vis.header.stamp = this->get_clock()->now();
         cloud_vis.header.frame_id = "map";        
@@ -298,58 +319,7 @@ private:
             std::memcpy(&(*i_rgb), &point.rgb, 4);
             ++ix; ++iy; ++iz; ++i_rgb;
         }
-        mMapPub->publish(cloud_vis);
-    }
-
-    void PublishOctomapInput()
-    {
-        // 현재 프레임에서 추적된 포인트들만 사용
-        auto mps = mpSLAM->GetTrackedMapPoints();
-        if(mps.empty() || m_semantic_hist.empty()) return;
-
-        // 현재 프레임의 라벨 정보만 가져옴
-        const auto& current_labels = m_semantic_hist.back();
-    
-        // 현재 카메라의 Pose (World -> Camera)
-        Sophus::SE3f Tcw;
-        {
-            std::lock_guard<std::mutex> lock(mPoseMutex);
-            Tcw = mLastPose.inverse();
-        }
-        if (Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) return;
-
-        std::vector<Eigen::Vector3f> static_points_camera_frame;
-        static_points_camera_frame.reserve(mps.size());
-
-        for(auto* pMP : mps) {
-            if (!pMP || pMP->isBad()) continue;
-
-            size_t key = reinterpret_cast<size_t>(pMP);
-            // 현재 프레임에서 객체로 라벨링되지 않은 포인트만 선택
-            if (current_labels.find(key) == current_labels.end()) {
-                // 월드 좌표계의 포인트를 카메라 좌표계로 변환
-                Eigen::Vector3f p_cam = Tcw * pMP->GetWorldPos();
-                static_points_camera_frame.push_back(p_cam);
-            }
-        }
-        
-        if (static_points_camera_frame.empty()) return;
-        
-        // --- PointCloud2 생성 및 발행 ---
-        sensor_msgs::msg::PointCloud2 cloud_static;
-        cloud_static.header.stamp = this->get_clock()->now();
-        cloud_static.header.frame_id = "camera";
-
-        sensor_msgs::PointCloud2Modifier mod_static(cloud_static);
-        mod_static.setPointCloud2FieldsByString(1, "xyz");
-        mod_static.resize(static_points_camera_frame.size());
-
-        sensor_msgs::PointCloud2Iterator<float> sx(cloud_static,"x"), sy(cloud_static,"y"), sz(cloud_static,"z");
-        for(const auto& p : static_points_camera_frame) {
-            *sx = p.x(); *sy = p.y(); *sz = p.z();
-            ++sx; ++sy; ++sz;
-        }
-        static_cloud_OctoMap->publish(cloud_static);
+        mYoloOrbMapPub->publish(cloud_vis);
     }
 
     void GrabImage(const sensor_msgs::msg::Image::SharedPtr msg) {
@@ -360,16 +330,25 @@ private:
         Sophus::SE3f Tcw = mpSLAM->TrackMonocular(frame, tframe);
         gl_slam_state.store(mpSLAM->GetTrackingState(), std::memory_order_relaxed);
 
-        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {       
-            std::lock_guard<std::mutex> lock(mPoseMutex);
-            mLastPose = Tcw.inverse();
+        if (!Tcw.unit_quaternion().isApprox(Eigen::Quaternionf(0,0,0,0))) {
+
+            // SLAM 원본 Twc
+            Sophus::SE3f T_slam_cam = Tcw.inverse(); 
+            {
+                std::lock_guard<std::mutex> lock(mPoseMutex);
+                mLastPose = T_slam_cam;
+            }
+
+            // 궤적 파일 저장을 위해 고정 회전 적용
+            Sophus::SE3f R_map_slam_SE3(R_map_slam_, Eigen::Vector3f::Zero());
+            Sophus::SE3f T_map_cam = R_map_slam_SE3 * T_slam_cam;
             
-            Sophus::SE3f Twc = Tcw.inverse();
-            Eigen::Vector3f twc = Twc.translation();
-            Eigen::Quaternionf q = Twc.unit_quaternion();
+            Eigen::Vector3f p_map = T_map_cam.translation();
+            Eigen::Quaternionf q_map = T_map_cam.unit_quaternion();
+
             mTrajectoryFile << std::fixed << std::setprecision(7) << tframe << " "
-                            << twc.x() << " " << twc.y() << " " << twc.z() << " "
-                            << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << std::endl;
+                            << p_map.x() << " " << p_map.y() << " " << p_map.z() << " "
+                            << q_map.x() << " " << q_map.y() << " " << q_map.z() << " " << q_map.w() << std::endl;
         }
 
         {
