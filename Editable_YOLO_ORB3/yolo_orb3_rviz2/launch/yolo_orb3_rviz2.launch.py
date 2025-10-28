@@ -10,6 +10,8 @@ def generate_launch_description():
         raise Exception('Environment variable ORB_SLAM3_ROOT is not set!')
     
     yolo_orb3_rviz2_share_dir = get_package_share_directory('yolo_orb3_rviz2')
+
+    # camera
     camera_node = Node(
         package='v4l2_camera',
         executable='v4l2_camera_node',
@@ -41,7 +43,26 @@ def generate_launch_description():
         ]
     )
 
-    # Running Rviz2
+    # 4) OctoMap server
+    octomap_node = Node(
+        package='octomap_server',
+        executable='octomap_server_node',
+        name='octomap_server',
+        output='screen',
+        parameters=[{
+            'frame_id': 'map',
+            'resolution': 0.05,                                     # 5 cm voxel
+            'sensor_model/max_range': 8.0,                          # 환경에 맞게 6~10 m 조정
+            'sensor_model/hit': 0.7,
+            'sensor_model/miss': 0.4,
+            'latch': False
+        }],
+        remappings=[
+            ('cloud_in', '/cloud_in_static')                        # SlamNode가 퍼블리시하는 '동적 제외' 점군
+        ]
+    )
+
+    # Rviz2
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -54,6 +75,7 @@ def generate_launch_description():
         camera_node,
         image_throttle_node,
         yolo_orb_slam_node,
+        octomap_node,
         rviz_node
     ])
     
