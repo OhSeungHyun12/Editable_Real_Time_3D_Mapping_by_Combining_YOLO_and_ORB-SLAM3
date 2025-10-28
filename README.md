@@ -20,6 +20,8 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 
 ## License
 
+https://github.com/YWL0720/YOLO_ORB_SLAM3.git
+
 ## Getting Started
 
 ### 1. Prerequisites
