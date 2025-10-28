@@ -1,9 +1,4 @@
-#include <ViewerAR.h>
-#include "../../../include/System.h"      
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <iostream>
-#include <algorithm>
+#include "headers.h"
 
 namespace ORB_SLAM3 {
 
