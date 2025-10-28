@@ -20,9 +20,11 @@ this project uses YOLOv11 for object detection and integrates the detected objec
 
 ## License
 
-https://github.com/UZ-SLAMLab/ORB_SLAM3.git
+> **ORB SLAM3:** https://github.com/UZ-SLAMLab/ORB_SLAM3.git
 
-https://github.com/YWL0720/YOLO_ORB_SLAM3.git
+> **YOLOv11:** https://github.com/ultralytics/ultralytics.git
+
+> **YOLO_ORB_SLAM3:** https://github.com/YWL0720/YOLO_ORB_SLAM3.git
 
 ## Getting Started
 
