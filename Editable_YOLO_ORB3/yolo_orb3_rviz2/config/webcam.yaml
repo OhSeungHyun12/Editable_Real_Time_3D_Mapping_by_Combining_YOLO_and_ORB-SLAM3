@@ -25,7 +25,7 @@ Camera.RGB: 1
 Camera.imageScale: 1.0
 
 # ORB Extractor Parameters
-ORBextractor.nFeatures: 1000
+ORBextractor.nFeatures: 2000
 ORBextractor.scaleFactor: 1.2
 ORBextractor.nLevels: 8
 ORBextractor.iniThFAST: 20
